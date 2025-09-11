@@ -6,7 +6,7 @@ import { FaPlus } from 'react-icons/fa';
 import DashboardWrapper from '../components/DashboardWrapper';
 import { useSnackbar } from "../helpers/SnackbarContext";
 
-function MemberMaintenance() {
+function AccountsManagement() {
   const history = useHistory();
   const { showMessage } = useSnackbar();
 
@@ -16,10 +16,10 @@ function MemberMaintenance() {
     }
   }, [history]);
 
-  const [members, setMembers] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
-  const [selectedMembers, setSelectedMembers] = useState([]);
+  const [selectedAccounts, setSelectedAccounts] = useState([]);
   const [showBatchActions, setShowBatchActions] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusAction, setStatusAction] = useState("");
@@ -27,57 +27,94 @@ function MemberMaintenance() {
 
   useEffect(() => {
     const controller = new AbortController();
-    const fetchMembers = async () => {
+    const fetchAccounts = async () => {
       try {
         const params = {};
         if (statusFilter) params.status = statusFilter;
         if (search) params.q = search;
-        const res = await axios.get("http://localhost:3001/members", {
+        const res = await axios.get("http://localhost:3001/accounts", {
           headers: { accessToken: localStorage.getItem("accessToken") },
           params,
           signal: controller.signal,
         });
         const payload = res?.data?.entity ?? res?.data;
-        setMembers(Array.isArray(payload) ? payload : []);
+        setAccounts(Array.isArray(payload) ? payload : []);
       } catch {}
     };
-    fetchMembers();
+    fetchAccounts();
     return () => controller.abort();
   }, [statusFilter, search]);
 
   const counts = useMemo(() => {
-    const list = Array.isArray(members) ? members : [];
-    const c = { Approved: 0, Pending: 0, Returned: 0, Rejected: 0 };
-    for (const m of list) {
-      if (m.status && c[m.status] !== undefined) c[m.status] += 1;
-    }
-    return c;
-  }, [members]);
+    return accounts.reduce((acc, account) => {
+      acc[account.status] = (acc[account.status] || 0) + 1;
+      return acc;
+    }, {});
+  }, [accounts]);
 
-  // Selection functions
+  const filteredAccounts = useMemo(() => {
+    // Since we're now filtering on the server side, we just return the accounts
+    // The server handles both status and search filtering
+    return accounts;
+  }, [accounts]);
+
+  const isAllSelected = selectedAccounts.length === filteredAccounts.length && filteredAccounts.length > 0;
+  const isIndeterminate = selectedAccounts.length > 0 && selectedAccounts.length < filteredAccounts.length;
+
+  const handleSelectAccount = (accountId, checked) => {
+    if (checked) {
+      setSelectedAccounts(prev => [...prev, accountId]);
+    } else {
+      setSelectedAccounts(prev => prev.filter(id => id !== accountId));
+    }
+  };
+
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedMembers(members.map(m => m.id));
+      setSelectedAccounts(filteredAccounts.map(account => account.id));
     } else {
-      setSelectedMembers([]);
+      setSelectedAccounts([]);
     }
   };
 
-  const handleSelectMember = (memberId, checked) => {
-    if (checked) {
-      setSelectedMembers(prev => [...prev, memberId]);
-    } else {
-      setSelectedMembers(prev => prev.filter(id => id !== memberId));
-    }
-  };
-
-  const isAllSelected = selectedMembers.length === members.length && members.length > 0;
-  const isIndeterminate = selectedMembers.length > 0 && selectedMembers.length < members.length;
-
-  // Show/hide batch actions based on selection
   useEffect(() => {
-    setShowBatchActions(selectedMembers.length > 0);
-  }, [selectedMembers]);
+    setShowBatchActions(selectedAccounts.length > 0);
+  }, [selectedAccounts]);
+
+  const handleDelete = async (accountId) => {
+    if (window.confirm("Are you sure you want to delete this account?")) {
+      try {
+        await axios.delete(`http://localhost:3001/accounts/${accountId}`, {
+          headers: { accessToken: localStorage.getItem("accessToken") },
+        });
+        showMessage("Account deleted successfully", "success");
+        setAccounts(prev => prev.filter(account => account.id !== accountId));
+      } catch (err) {
+        const msg = err?.response?.data?.error || "Failed to delete account";
+        showMessage(msg, "error");
+      }
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete ${selectedAccounts.length} account(s)?`)) {
+      try {
+        await Promise.all(
+          selectedAccounts.map(accountId =>
+            axios.delete(`http://localhost:3001/accounts/${accountId}`, {
+              headers: { accessToken: localStorage.getItem("accessToken") },
+            })
+          )
+        );
+        showMessage(`${selectedAccounts.length} account(s) deleted successfully`, "success");
+        setAccounts(prev => prev.filter(account => !selectedAccounts.includes(account.id)));
+        setSelectedAccounts([]);
+      } catch (err) {
+        const msg = err?.response?.data?.error || "Failed to delete accounts";
+        showMessage(msg, "error");
+      }
+    }
+  };
 
   // Status change functions
   const handleStatusChange = (action) => {
@@ -87,10 +124,10 @@ function MemberMaintenance() {
 
   const confirmStatusChange = async () => {
     try {
-      const promises = selectedMembers.map(memberId => 
-        axios.put(`http://localhost:3001/members/${memberId}`, {
+      const promises = selectedAccounts.map(accountId => 
+        axios.put(`http://localhost:3001/accounts/${accountId}`, {
           status: statusAction,
-          verifierRemarks: verifierRemarks
+          remarks: verifierRemarks
         }, { 
           headers: { accessToken: localStorage.getItem("accessToken") } 
         })
@@ -99,18 +136,19 @@ function MemberMaintenance() {
       await Promise.all(promises);
       
       // Update local state
-      setMembers(prev => prev.map(member => 
-        selectedMembers.includes(member.id) 
-          ? { ...member, status: statusAction, verifierRemarks: verifierRemarks }
-          : member
+      setAccounts(prev => prev.map(account => 
+        selectedAccounts.includes(account.id) 
+          ? { ...account, status: statusAction, remarks: verifierRemarks }
+          : account
       ));
       
-      showMessage(`${statusAction} ${selectedMembers.length} member(s) successfully`, "success");
-      setSelectedMembers([]);
+      showMessage(`${statusAction} ${selectedAccounts.length} account(s) successfully`, "success");
+      setSelectedAccounts([]);
       setShowStatusModal(false);
       setVerifierRemarks("");
     } catch (err) {
-      const msg = err?.response?.data?.error || "Failed to update member status";
+      console.error("Error updating account status:", err);
+      const msg = err?.response?.data?.message || err?.response?.data?.error || "Failed to update account status";
       showMessage(msg, "error");
     }
   };
@@ -119,11 +157,7 @@ function MemberMaintenance() {
     <DashboardWrapper>
       <header className="header">
         <div className="header__left">
-          {/* <div className="brand">
-            <span className="brand__logo">S</span>
-            <span className="brand__name">SACCOFLOW</span>
-          </div> */}
-          <div className="greeting">Member Maintenance</div>
+          <div className="greeting">Accounts Management</div>
         </div>
       </header>
 
@@ -134,8 +168,8 @@ function MemberMaintenance() {
               <FiCheckCircle />
             </div>
             <div className="card__content">
-              <h4>Approved</h4>
-              <div className="card__kpi">{counts.Approved}</div>
+              <h4>Active</h4>
+              <div className="card__kpi">{counts.Active || 0}</div>
             </div>
           </div>
           <div className="card card--pending">
@@ -143,8 +177,8 @@ function MemberMaintenance() {
               <FiClock />
             </div>
             <div className="card__content">
-              <h4>Pending</h4>
-              <div className="card__kpi">{counts.Pending}</div>
+              <h4>Inactive</h4>
+              <div className="card__kpi">{counts.Inactive || 0}</div>
             </div>
           </div>
           <div className="card card--returned">
@@ -152,17 +186,8 @@ function MemberMaintenance() {
               <FiRotateCcw />
             </div>
             <div className="card__content">
-              <h4>Returned</h4>
-              <div className="card__kpi">{counts.Returned}</div>
-            </div>
-          </div>
-          <div className="card card--rejected">
-            <div className="card__icon">
-              <FiXCircle />
-            </div>
-            <div className="card__content">
-              <h4>Rejected</h4>
-              <div className="card__kpi">{counts.Rejected}</div>
+              <h4>Total</h4>
+              <div className="card__kpi">{accounts.length}</div>
             </div>
           </div>
         </section>
@@ -171,21 +196,20 @@ function MemberMaintenance() {
           <div className="tableToolbar">
             <select className="statusSelect" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
               <option value="">All Statuses</option>
-              <option value="Approved">Approved</option>
-              <option value="Pending">Pending</option>
-              <option value="Returned">Returned</option>
-              <option value="Rejected">Rejected</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Suspended">Suspended</option>
+              <option value="Closed">Closed</option>
             </select>
 
             <div className="searchWrapper">
-              <input className="searchInput" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search members..." />
+              <input className="searchInput" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search accounts..." />
               <span className="searchIcon">🔍</span>
             </div>
 
-
             <button 
               className="pill" 
-              onClick={() => history.push("/member/new")}
+              onClick={() => history.push("/account-form/new")}
               style={{
                 backgroundColor: "var(--primary-500)",
                 color: "white",
@@ -211,21 +235,21 @@ function MemberMaintenance() {
                 e.target.style.transform = "translateY(0)";
                 e.target.style.boxShadow = "0 2px 8px rgba(63, 115, 179, 0.2)";
               }}
-              title="Add Member"
+              title="Add Account"
             >
               <FaPlus />
-              Add Member
+              Add Account
             </button>
 
             {/* Batch Action Buttons */}
             {showBatchActions && (
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                 <span style={{ fontSize: "14px", color: "var(--muted-text)", marginRight: "8px" }}>
-                  {selectedMembers.length} selected
+                  {selectedAccounts.length} selected
                 </span>
                 <button 
                   className="pill" 
-                  onClick={() => handleStatusChange("Approved")}
+                  onClick={() => handleStatusChange("Active")}
                   style={{
                     backgroundColor: "#10b981",
                     color: "white",
@@ -237,11 +261,27 @@ function MemberMaintenance() {
                     cursor: "pointer"
                   }}
                 >
-                  Approve
+                  Activate
                 </button>
                 <button 
                   className="pill" 
-                  onClick={() => handleStatusChange("Returned")}
+                  onClick={() => handleStatusChange("Inactive")}
+                  style={{
+                    backgroundColor: "#6b7280",
+                    color: "white",
+                    border: "none",
+                    padding: "6px 12px",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    cursor: "pointer"
+                  }}
+                >
+                  Deactivate
+                </button>
+                <button 
+                  className="pill" 
+                  onClick={() => handleStatusChange("Suspended")}
                   style={{
                     backgroundColor: "#f97316",
                     color: "white",
@@ -253,11 +293,11 @@ function MemberMaintenance() {
                     cursor: "pointer"
                   }}
                 >
-                  Return
+                  Suspend
                 </button>
                 <button 
                   className="pill" 
-                  onClick={() => handleStatusChange("Rejected")}
+                  onClick={() => handleStatusChange("Closed")}
                   style={{
                     backgroundColor: "#ef4444",
                     color: "white",
@@ -269,7 +309,7 @@ function MemberMaintenance() {
                     cursor: "pointer"
                   }}
                 >
-                  Reject
+                  Close
                 </button>
               </div>
             )}
@@ -291,35 +331,33 @@ function MemberMaintenance() {
                       style={{ cursor: "pointer" }}
                     />
                   </th>
-                  <th>Id</th>
-                  <th>First Name</th>
-                  <th>Last Name</th>
-                  <th>Gender</th>
-                  <th>Date of Birth</th>
-                  <th>Nationality</th>
-                  <th>ID Number</th>
+                  <th>Account ID</th>
+                  <th>Account Name</th>
+                  <th>Account Number</th>
+                  <th>Member</th>
+                  <th>Product</th>
+                  <th>Balance (KSH)</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {members.map(m => (
-                  <tr key={m.id}>
+                {filteredAccounts.map(account => (
+                  <tr key={account.id}>
                     <td>
                       <input
                         type="checkbox"
-                        checked={selectedMembers.includes(m.id)}
-                        onChange={(e) => handleSelectMember(m.id, e.target.checked)}
+                        checked={selectedAccounts.includes(account.id)}
+                        onChange={(e) => handleSelectAccount(account.id, e.target.checked)}
                         style={{ cursor: "pointer" }}
                       />
                     </td>
-                    <td>{m.memberNo}</td>
-                    <td>{m.firstName}</td>
-                    <td>{m.lastName}</td>
-                    <td>{m.gender}</td>
-                    <td>{m.dateOfBirth}</td>
-                    <td>{m.nationality}</td>
-                    <td>{m.identificationNumber}</td>
+                    <td>{account.accountId}</td>
+                    <td>{account.accountName}</td>
+                    <td>{account.accountNumber}</td>
+                    <td>{account.member ? `${account.member.firstName} ${account.member.lastName}` : 'N/A'}</td>
+                    <td>{account.product ? account.product.productName : 'N/A'}</td>
+                    <td>{account.availableBalance?.toLocaleString() || '0'}</td>
                     <td>
                       <div 
                         style={{
@@ -331,48 +369,53 @@ function MemberMaintenance() {
                           textTransform: "uppercase",
                           letterSpacing: "0.5px",
                           backgroundColor: 
-                            m.status === "Approved" ? "rgba(16, 185, 129, 0.2)" :
-                            m.status === "Pending" ? "rgba(6, 182, 212, 0.2)" :
-                            m.status === "Returned" ? "rgba(249, 115, 22, 0.2)" :
-                            m.status === "Rejected" ? "rgba(239, 68, 68, 0.2)" :
+                            account.status === "Active" ? "rgba(16, 185, 129, 0.2)" :
+                            account.status === "Inactive" ? "rgba(107, 114, 128, 0.2)" :
+                            account.status === "Suspended" ? "rgba(249, 115, 22, 0.2)" :
+                            account.status === "Closed" ? "rgba(239, 68, 68, 0.2)" :
                             "rgba(107, 114, 128, 0.2)",
                           color: 
-                            m.status === "Approved" ? "#059669" :
-                            m.status === "Pending" ? "#0891b2" :
-                            m.status === "Returned" ? "#ea580c" :
-                            m.status === "Rejected" ? "#dc2626" :
+                            account.status === "Active" ? "#059669" :
+                            account.status === "Inactive" ? "#6b7280" :
+                            account.status === "Suspended" ? "#ea580c" :
+                            account.status === "Closed" ? "#dc2626" :
                             "#6b7280",
                           border: `1px solid ${
-                            m.status === "Approved" ? "rgba(16, 185, 129, 0.3)" :
-                            m.status === "Pending" ? "rgba(6, 182, 212, 0.3)" :
-                            m.status === "Returned" ? "rgba(249, 115, 22, 0.3)" :
-                            m.status === "Rejected" ? "rgba(239, 68, 68, 0.3)" :
+                            account.status === "Active" ? "rgba(16, 185, 129, 0.3)" :
+                            account.status === "Inactive" ? "rgba(107, 114, 128, 0.3)" :
+                            account.status === "Suspended" ? "rgba(249, 115, 22, 0.3)" :
+                            account.status === "Closed" ? "rgba(239, 68, 68, 0.3)" :
                             "rgba(107, 114, 128, 0.3)"
                           }`
                         }}
                       >
-                        {m.status}
+                        {account.status}
                       </div>
                     </td>
-                    <td className="actions">
-                      <button className="action-btn action-btn--view" onClick={() => history.push(`/member/${m.id}`)} title="View">
-                        <FiEye />
-                      </button>
-                      <button className="action-btn action-btn--edit" onClick={() => history.push(`/member/${m.id}?edit=1`)} title="Update">
-                        <FiEdit3 />
-                      </button>
-                      <button className="action-btn action-btn--delete" onClick={async () => {
-                        try {
-                          await axios.delete(`http://localhost:3001/members/${m.id}`, { headers: { accessToken: localStorage.getItem("accessToken") } });
-                          setMembers(curr => curr.filter(x => x.id !== m.id));
-                          showMessage("Member deleted successfully", "success");
-                        } catch (err) {
-                          const msg = err?.response?.data?.error || "Failed to delete member";
-                          showMessage(msg, "error");
-                        }
-                      }} title="Delete">
-                        <FiTrash2 />
-                      </button>
+                    <td>
+                      <div className="actions">
+                        <button
+                          className="action-btn action-btn--view"
+                          onClick={() => history.push(`/account-form/${account.id}`)}
+                          title="View"
+                        >
+                          <FiEye />
+                        </button>
+                        <button
+                          className="action-btn action-btn--edit"
+                          onClick={() => history.push(`/account-form/${account.id}?edit=1`)}
+                          title="Edit"
+                        >
+                          <FiEdit3 />
+                        </button>
+                        <button
+                          className="action-btn action-btn--delete"
+                          onClick={() => handleDelete(account.id)}
+                          title="Delete"
+                        >
+                          <FiTrash2 />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -384,40 +427,41 @@ function MemberMaintenance() {
 
       {/* Status Change Modal */}
       {showStatusModal && (
-        <div 
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.7)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 10000
-          }}
-          onClick={() => setShowStatusModal(false)}
-        >
-          <div 
-            style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              padding: "24px",
-              width: "90%",
-              maxWidth: "500px",
-              maxHeight: "80vh",
-              overflow: "auto"
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ margin: "0 0 20px 0", color: "var(--primary-700)" }}>
-              Confirm Status Change
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: "white",
+            padding: "24px",
+            borderRadius: "12px",
+            width: "90%",
+            maxWidth: "500px",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+          }}>
+            <h3 style={{
+              margin: "0 0 16px 0",
+              fontSize: "18px",
+              fontWeight: "600",
+              color: "var(--primary-700)"
+            }}>
+              Change Status to {statusAction}
             </h3>
             
-            <p style={{ marginBottom: "20px", color: "var(--muted-text)", textAlign: "center" }}>
-              You are about to {statusAction === "Returned" ? "Return" : statusAction} {selectedMembers.length} {selectedMembers.length === 1 ? 'record' : 'records'}.
+            <p style={{
+              margin: "0 0 20px 0",
+              color: "var(--muted-text)",
+              fontSize: "14px"
+            }}>
+              You are about to change the status of {selectedAccounts.length} account(s) to <strong>{statusAction}</strong>.
             </p>
 
             <div style={{ marginBottom: "20px" }}>
@@ -461,9 +505,10 @@ function MemberMaintenance() {
                   padding: "8px 16px",
                   fontSize: "14px",
                   backgroundColor: 
-                    statusAction === "Approved" ? "#10b981" :
-                    statusAction === "Returned" ? "#f97316" :
-                    statusAction === "Rejected" ? "#ef4444" :
+                    statusAction === "Active" ? "#10b981" :
+                    statusAction === "Inactive" ? "#6b7280" :
+                    statusAction === "Suspended" ? "#f97316" :
+                    statusAction === "Closed" ? "#ef4444" :
                     "var(--primary-500)",
                   color: "white"
                 }}
@@ -478,6 +523,4 @@ function MemberMaintenance() {
   );
 }
 
-export default MemberMaintenance;
-
-
+export default AccountsManagement;

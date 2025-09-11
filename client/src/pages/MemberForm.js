@@ -3,6 +3,7 @@ import { useHistory, useParams, useLocation } from "react-router-dom";
 import { FiArrowLeft, FiEdit3, FiTrash2, FiX } from "react-icons/fi";
 import axios from "axios";
 import { useSnackbar } from "../helpers/SnackbarContext";
+import DashboardWrapper from '../components/DashboardWrapper';
 
 function MemberForm() {
   const history = useHistory();
@@ -61,6 +62,11 @@ function MemberForm() {
   const [dragOver, setDragOver] = useState(false);
 
   const [activeTab, setActiveTab] = useState("personal");
+  
+  // Accounts state
+  const [accounts, setAccounts] = useState([]);
+  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [accountsError, setAccountsError] = useState(null);
 
   useEffect(() => {
     if (!localStorage.getItem("accessToken")) {
@@ -72,6 +78,28 @@ function MemberForm() {
   const generateMemberNo = () => {
     const randomNum = Math.floor(1000000 + Math.random() * 9000000); // 7 digits
     return `M-${randomNum}`;
+  };
+
+  // Fetch accounts for the member
+  const fetchMemberAccounts = async (memberId) => {
+    if (!memberId || memberId === "new") return;
+    
+    setAccountsLoading(true);
+    setAccountsError(null);
+    
+    try {
+      const res = await axios.get(`http://localhost:3001/accounts/member/${memberId}`, {
+        headers: { accessToken: localStorage.getItem("accessToken") },
+      });
+      const data = res.data?.entity || res.data;
+      setAccounts(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error fetching member accounts:", err);
+      setAccountsError(err?.response?.data?.error || "Failed to fetch accounts");
+      setAccounts([]);
+    } finally {
+      setAccountsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -142,6 +170,9 @@ function MemberForm() {
         } else {
           setSignature(null);
         }
+        
+        // Fetch accounts for this member
+        await fetchMemberAccounts(id);
       } else {
         // Generate member number for new members
         setForm(prev => ({ ...prev, memberNo: generateMemberNo() }));
@@ -258,6 +289,9 @@ function MemberForm() {
       } else if (photo && typeof photo === 'string' && photo.startsWith('data:')) {
         // Already base64 encoded
         photoBase64 = photo;
+      } else if (photo && photo.isBase64 && photo.data) {
+        // Photo object with base64 data from database
+        photoBase64 = photo.data;
       } else if (photo) {
         // Just filename from database
         photoBase64 = photo.name;
@@ -272,6 +306,9 @@ function MemberForm() {
       } else if (signature && typeof signature === 'string' && signature.startsWith('data:')) {
         // Already base64 encoded
         signatureBase64 = signature;
+      } else if (signature && signature.isBase64 && signature.data) {
+        // Signature object with base64 data from database
+        signatureBase64 = signature.data;
       } else if (signature) {
         // Just filename from database
         signatureBase64 = signature.name;
@@ -298,7 +335,7 @@ function MemberForm() {
   };
 
   return (
-    <div className="dashboard">
+    <DashboardWrapper>
       <header className="header">
         <div className="header__left">
           <button className="iconBtn" onClick={() => history.push("/member-maintenance")} title="Back" aria-label="Back" style={{ marginRight: 8 }}>
@@ -445,7 +482,8 @@ function MemberForm() {
                   </div>
                 </div>
               )}
-            </div>          </div> 
+            </div>          
+          </div> 
 
           {/* Tab Navigation */}
           <div style={{
@@ -524,6 +562,23 @@ function MemberForm() {
               }}
             >
               Photo & Signature
+            </div>
+            <div
+              onClick={() => setActiveTab("accounts")}
+              style={{
+                padding: "12px 24px",
+                color: activeTab === "accounts" ? "#007bff" : "#666",
+                cursor: "pointer",
+                fontWeight: activeTab === "accounts" ? "600" : "400",
+                background: activeTab === "accounts" ? "#e3f2fd" : "transparent",
+                border: "1px solid transparent",
+                borderRadius: "6px",
+                fontSize: "14px",
+                transition: "all 0.2s ease",
+                margin: "0 2px"
+              }}
+            >
+              Accounts
             </div>
           </div>
 
@@ -902,22 +957,214 @@ function MemberForm() {
                 >
                   Back
                 </button>
-          {(isCreate || isEdit) && (
-              <button
-                className="pill"
-                type="submit"
-                style={{
-                  padding: "8px 16px",
-                  fontSize: "14px",
-                  minWidth: "auto"
-                }}
-              >
-                {isCreate ? "Add Member" : "Update Member"}
-              </button>
+                <button
+                  type="button"
+                  className="pill"
+                  onClick={() => setActiveTab("accounts")}
+                  style={{
+                    padding: "8px 16px",
+                    fontSize: "14px",
+                    minWidth: "auto"
+                  }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "accounts" && (
+            <div>
+              {/* Accounts Linked Section */}
+              {!isCreate && (
+                <div>
+                  <h3 style={{ 
+                    marginBottom: "16px", 
+                    color: "var(--primary-700)",
+                    fontSize: "18px",
+                    fontWeight: "600"
+                  }}>
+                    Accounts Linked
+                  </h3>
+                  
+                  {accountsLoading && (
+                    <div style={{ 
+                      padding: "20px", 
+                      textAlign: "center",
+                      color: "var(--primary-700)",
+                      backgroundColor: "var(--surface-2)",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border)"
+                    }}>
+                      <div style={{ fontSize: "16px", marginBottom: "8px" }}>⏳</div>
+                      <p>Loading accounts...</p>
+                    </div>
+                  )}
+                  
+                  {accountsError && (
+                    <div style={{ 
+                      padding: "20px", 
+                      textAlign: "center",
+                      color: "#dc2626",
+                      backgroundColor: "rgba(239, 68, 68, 0.1)",
+                      borderRadius: "8px",
+                      margin: "16px 0",
+                      border: "1px solid rgba(239, 68, 68, 0.2)"
+                    }}>
+                      <div style={{ fontSize: "16px", marginBottom: "8px" }}>⚠️</div>
+                      <p style={{ fontSize: "14px" }}>{accountsError}</p>
+                    </div>
+                  )}
+                  
+                  {!accountsLoading && !accountsError && accounts.length === 0 && (
+                    <div style={{ 
+                      padding: "20px", 
+                      textAlign: "center",
+                      color: "var(--muted-text)",
+                      backgroundColor: "var(--surface-2)",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border)"
+                    }}>
+                      <div style={{ fontSize: "32px", marginBottom: "12px" }}>🏦</div>
+                      <p style={{ fontSize: "14px" }}>
+                        No accounts linked to this member yet.
+                      </p>
+                      <p style={{ fontSize: "12px", marginTop: "8px", fontStyle: "italic" }}>
+                        Accounts will appear here once they are created for this member.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {!accountsLoading && !accountsError && accounts.length > 0 && (
+                    <div className="tableContainer">
+                      <table className="table">
+                        <thead>
+                          <tr>
+                            <th>Account ID</th>
+                            <th>Account Number</th>
+                            <th>Account Name</th>
+                            <th>Product</th>
+                            <th>Available Balance</th>
+                            <th>Status</th>
+                            <th>Created On</th>
+                            <th>Created By</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {accounts.map((account, index) => (
+                            <tr key={account.id || index}>
+                              <td style={{ fontFamily: "monospace", fontWeight: "600" }}>
+                                {account.accountId}
+                              </td>
+                              <td style={{ fontFamily: "monospace" }}>
+                                {account.accountNumber}
+                              </td>
+                              <td style={{ fontWeight: "500" }}>
+                                {account.accountName}
+                              </td>
+                              <td>
+                                {account.product ? (
+                                  <div>
+                                    <div style={{ fontWeight: "500" }}>
+                                      {account.product.productName}
+                                    </div>
+                                    <div style={{ fontSize: "12px", color: "var(--muted-text)" }}>
+                                      {account.product.productId}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span style={{ color: "var(--muted-text)" }}>N/A</span>
+                                )}
+                              </td>
+                              <td style={{ 
+                                fontFamily: "monospace", 
+                                fontWeight: "600",
+                                color: account.availableBalance >= 0 ? "var(--success-700)" : "var(--error-700)"
+                              }}>
+                                KES {parseFloat(account.availableBalance || 0).toLocaleString('en-KE', { 
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2 
+                                })}
+                              </td>
+                              <td>
+                                <div 
+                                  style={{
+                                    display: "inline-block",
+                                    padding: "4px 8px",
+                                    borderRadius: "12px",
+                                    fontSize: "11px",
+                                    fontWeight: "600",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.5px",
+                                    backgroundColor: 
+                                      account.status === "Active" ? "rgba(16, 185, 129, 0.2)" :
+                                      account.status === "Inactive" ? "rgba(107, 114, 128, 0.2)" :
+                                      account.status === "Suspended" ? "rgba(249, 115, 22, 0.2)" :
+                                      account.status === "Closed" ? "rgba(239, 68, 68, 0.2)" :
+                                      "rgba(107, 114, 128, 0.2)",
+                                    color: 
+                                      account.status === "Active" ? "#059669" :
+                                      account.status === "Inactive" ? "#6b7280" :
+                                      account.status === "Suspended" ? "#ea580c" :
+                                      account.status === "Closed" ? "#dc2626" :
+                                      "#6b7280",
+                                    border: `1px solid ${
+                                      account.status === "Active" ? "rgba(16, 185, 129, 0.3)" :
+                                      account.status === "Inactive" ? "rgba(107, 114, 128, 0.3)" :
+                                      account.status === "Suspended" ? "rgba(249, 115, 22, 0.3)" :
+                                      account.status === "Closed" ? "rgba(239, 68, 68, 0.3)" :
+                                      "rgba(107, 114, 128, 0.3)"
+                                    }`
+                                  }}
+                                >
+                                  {account.status || "Unknown"}
+                                </div>
+                              </td>
+                              <td style={{ fontSize: "13px" }}>
+                                {account.createdOn ? new Date(account.createdOn).toLocaleDateString('en-KE') : "N/A"}
+                              </td>
+                              <td style={{ fontSize: "13px" }}>
+                                {account.createdBy || "System"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "24px" }}>
+                <button
+                  type="button"
+                  className="pill"
+                  onClick={() => setActiveTab("photo")}
+                  style={{
+                    padding: "8px 16px",
+                    fontSize: "14px",
+                    minWidth: "auto"
+                  }}
+                >
+                  Back
+                </button>
+                {(isCreate || isEdit) && (
+                  <button
+                    className="pill"
+                    type="submit"
+                    style={{
+                      padding: "8px 16px",
+                      fontSize: "14px",
+                      minWidth: "auto"
+                    }}
+                  >
+                    {isCreate ? "Add Member" : "Update Member"}
+                  </button>
                 )}
               </div>
             </div>
           )}
+
 
 
           {/* Audit Fields Section */}
@@ -1337,7 +1584,8 @@ function MemberForm() {
           </div>
         </div>
       )}
-    </div>
+
+    </DashboardWrapper>
   );
 }
 

@@ -32,6 +32,15 @@ module.exports = (sequelize, DataTypes) => {
     isDeleted: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
   });
 
+  // Define associations
+  Members.associate = (models) => {
+    // Member has many Accounts
+    Members.hasMany(models.Accounts, {
+      foreignKey: 'memberId',
+      as: 'accounts'
+    });
+  };
+
   return Members;
 };
 

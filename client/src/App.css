@@ -14,36 +14,36 @@
 
 /* THEME */
 :root {
-  /* SaccoSphere Financial Light Blue Theme */
-  --primary: #3f73b3;
-  /* brand medium blue */
-  --primary-700: #2f5c92;
-  --primary-600: #376aa8;
-  --primary-500: #3f73b3;
-  --primary-400: #6a95c9;
-  --primary-300: #9fbbe1;
-  --primary-200: #c2d6ee;
-  --primary-100: #d5e5f5;
-  /* requested light financial blue */
-  --accent: #26c2c0;
-  /* calm teal accent */
-  --accent-2: #70e1f5;
-  /* light cyan accent */
-  --text-on-primary: #0e1b2b;
-  --text: #0e1b2b;
-  --muted-text: #51627a;
+  /* Modern Teal & Orange Theme */
+  --primary: #20b2aa;
+  /* main teal */
+  --primary-700: #1a9b94;
+  --primary-600: #1ea69f;
+  --primary-500: #20b2aa;
+  --primary-400: #4bc4bd;
+  --primary-300: #7dd6d0;
+  --primary-200: #a8e8e3;
+  --primary-100: #d4f4f1;
+  /* orange accent */
+  --accent: #ff6b35;
+  /* vibrant orange */
+  --accent-2: #ff8c69;
+  /* light orange */
+  --text-on-primary: #ffffff;
+  --text: #2c3e50;
+  --muted-text: #6c757d;
   --surface: #ffffff;
-  --surface-2: #f7faff;
-  --border: #d6e3f3;
-  --shadow: 0 12px 28px rgba(16, 42, 86, 0.12);
+  --surface-2: #f8f9fa;
+  --border: #e9ecef;
+  --shadow: 0 12px 28px rgba(32, 178, 170, 0.15);
 }
 
 body {
   margin: 0;
   padding: 0;
-  background: radial-gradient(1200px 800px at 10% -10%, rgba(213, 229, 245, 0.7), transparent),
-    radial-gradient(1000px 600px at 110% 10%, rgba(159, 187, 225, 0.35), transparent),
-    linear-gradient(180deg, #fafcff 0%, #f2f7fd 100%);
+  background: radial-gradient(1200px 800px at 10% -10%, rgba(212, 244, 241, 0.6), transparent),
+    radial-gradient(1000px 600px at 110% 10%, rgba(125, 214, 208, 0.3), transparent),
+    linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", Arial, sans-serif;
   overflow-x: hidden;
@@ -67,21 +67,21 @@ body {
 }
 
 .orb.one {
-  background: #9fbbe1;
+  background: #7dd6d0;
   left: -120px;
   top: -120px;
   animation: float1 18s ease-in-out infinite;
 }
 
 .orb.two {
-  background: #6a95c9;
+  background: #4bc4bd;
   right: -160px;
   top: 10%;
   animation: float2 22s ease-in-out infinite;
 }
 
 .orb.three {
-  background: #26c2c0;
+  background: #ff6b35;
   left: 30%;
   bottom: -180px;
   animation: float3 26s ease-in-out infinite;
@@ -360,6 +360,11 @@ a {
   gap: 10px;
   margin-left: 20px;
   margin-right: 24px;
+  transition: margin-left 0.1s ease;
+}
+
+.navbar.sidebar-open .brand {
+  margin-left: 300px; /* Move logo next to sidebar (280px + 20px padding) */
 }
 
 .brandTitle {
@@ -1401,10 +1406,10 @@ button {
 .o-handle {
   position: absolute;
   top: 75px;
-  right: -30px;
+  right: -25px;
   /* further out when closed */
   height: 60px;
-  width: 30px;
+  width: 25px;
   background-color: #fff;
   color: #000;
   border: 1px solid rgba(63, 115, 179, 0.25);
@@ -1419,7 +1424,7 @@ button {
 }
 
 .o-sidebar.open .o-handle {
-  right: -30px;
+  right: -25px;
 }
 
 .o-handle__arrow {
@@ -1466,6 +1471,12 @@ button {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
+  transition: margin-left 0.1s ease;
+}
+
+.dashboard.sidebar-open {
+  margin-left: 280px; /* Squeeze into remaining space when sidebar is open */
+  max-width: calc(100vw - 280px - 48px); /* Adjust max-width to account for sidebar and padding */
 }
 
 .dashboard__topbar {
@@ -1568,9 +1579,9 @@ button {
   margin: 6px 0 8px;
 }
 
-/* Status Cards with Blue-themed SVG backgrounds */
+/* Status Cards with Teal-themed SVG backgrounds */
 .card--approved {
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: linear-gradient(135deg, #20b2aa, #1a9b94);
   color: white;
   position: relative;
   overflow: hidden;
@@ -1589,7 +1600,7 @@ button {
 }
 
 .card--pending {
-  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  background: linear-gradient(135deg, #ff6b35, #e55a2b);
   color: white;
   position: relative;
   overflow: hidden;
@@ -1608,7 +1619,7 @@ button {
 }
 
 .card--returned {
-  background: linear-gradient(135deg, #f97316, #ea580c);
+  background: linear-gradient(135deg, #6c757d, #495057);
   color: white;
   position: relative;
   overflow: hidden;
@@ -1627,7 +1638,7 @@ button {
 }
 
 .card--rejected {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: linear-gradient(135deg, #2c3e50, #1a252f);
   color: white;
   position: relative;
   overflow: hidden;
@@ -1776,62 +1787,19 @@ button {
 .table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
+  min-width: max-content;
 }
 
-/* Specific column widths for member maintenance table */
+/* Specific column widths for tables */
 .table th:first-child,
 .table td:first-child {
   width: 50px; /* Select column - just enough for checkbox */
   text-align: center;
 }
 
-.table th:nth-child(2),
-.table td:nth-child(2) {
-  width: 100px; /* Member No */
-}
-
-.table th:nth-child(3),
-.table td:nth-child(3) {
-  width: 120px; /* First Name */
-}
-
-.table th:nth-child(4),
-.table td:nth-child(4) {
-  width: 120px; /* Last Name */
-}
-
-.table th:nth-child(5),
-.table td:nth-child(5) {
-  width: 80px; /* Gender */
-}
-
-.table th:nth-child(6),
-.table td:nth-child(6) {
-  width: 120px; /* Date of Birth */
-}
-
-.table th:nth-child(7),
-.table td:nth-child(7) {
-  width: 100px; /* Nationality */
-}
-
-.table th:nth-child(8),
-.table td:nth-child(8) {
-  width: 120px; /* ID Number */
-}
-
-.table th:nth-child(9),
-.table td:nth-child(9) {
-  width: 100px; /* Status */
-  white-space: normal;
-  overflow: visible;
-  text-overflow: unset;
-}
-
 .table th:last-child,
 .table td:last-child {
-  width: 120px; /* Actions */
   text-align: center;
 }
 
@@ -1841,8 +1809,9 @@ button {
   border-bottom: 1px solid var(--border);
   text-align: left;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: unset;
+  min-width: fit-content;
 }
 
 .table thead th {

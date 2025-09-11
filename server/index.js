@@ -20,6 +20,8 @@ const membersRouter = require("./routes/Members");
 app.use("/members", membersRouter);
 const productsRouter = require("./routes/Products");
 app.use("/products", productsRouter);
+const accountsRouter = require("./routes/Accounts");
+app.use("/accounts", accountsRouter);
 
 db.sequelize.sync().then(() => {
   try {

@@ -3,6 +3,7 @@ import { useHistory } from "react-router-dom";
 import axios from "axios";
 import { FiEye, FiEdit3, FiTrash2, FiCheckCircle, FiClock, FiRotateCcw, FiXCircle } from "react-icons/fi";
 import { FaPlus } from 'react-icons/fa';
+import DashboardWrapper from '../components/DashboardWrapper';
 import { useSnackbar } from "../helpers/SnackbarContext";
 
 function ProductMaintenance() {
@@ -115,7 +116,7 @@ function ProductMaintenance() {
   };
 
   return (
-    <div className="dashboard">
+    <DashboardWrapper>
       <header className="header">
         <div className="header__left">
           <div className="greeting">Product Maintenance</div>
@@ -460,7 +461,7 @@ function ProductMaintenance() {
           </div>
         </div>
       )}
-    </div>
+    </DashboardWrapper>
   );
 }
 

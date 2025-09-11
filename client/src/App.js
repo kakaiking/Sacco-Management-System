@@ -6,6 +6,9 @@ import MemberMaintenance from "./pages/MemberMaintenance";
 import MemberForm from "./pages/MemberForm";
 import ProductMaintenance from "./pages/ProductMaintenance";
 import ProductForm from "./pages/ProductForm";
+import AccountsManagement from "./pages/AccountsManagement";
+import AccountForm from "./pages/AccountForm";
+import RoleMaintenance from "./pages/RoleMaintenance";
 import Admin from "./pages/Admin";
 import CreatePost from "./pages/CreatePost";
 import Post from "./pages/Post";
@@ -16,6 +19,8 @@ import Profile from "./pages/Profile";
 import ChangePassword from "./pages/ChangePassword";
 
 import { AuthContext } from "./helpers/AuthContext";
+import { SidebarProvider } from "./helpers/SidebarContext";
+import NavbarWrapper from "./components/NavbarWrapper";
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 
@@ -67,9 +72,10 @@ function App() {
   return (
     <div className="App">
       <AuthContext.Provider value={{ authState, setAuthState }}>
-        <Router>
-          <Sidebar />
-          <div className="navbar">
+        <SidebarProvider>
+          <Router>
+            <Sidebar />
+          <NavbarWrapper>
             <div className="brand">
               <img src="/craftLogo2.png" alt="Craft Silicon" className="brandLogo" />
               <strong className="brandTitle">Sacco Sphere</strong>
@@ -101,7 +107,7 @@ function App() {
                 </div>
               )}
             </div>
-          </div>
+          </NavbarWrapper>
           <Switch>
             <Route path="/" exact component={Home} />
             <Route path="/createpost" exact component={CreatePost} />
@@ -110,6 +116,9 @@ function App() {
             <Route path="/member/:id" exact component={MemberForm} />
             <Route path="/product-maintenance" exact component={ProductMaintenance} />
             <Route path="/product/:id" exact component={ProductForm} />
+            <Route path="/accounts-management" exact component={AccountsManagement} />
+            <Route path="/account-form/:id" exact component={AccountForm} />
+            <Route path="/role-maintenance" exact component={RoleMaintenance} />
             <Route path="/post/:id" exact component={Post} />
             <Route path="/registration" exact component={Registration} />
             <Route path="/login" exact component={Login} />
@@ -118,6 +127,7 @@ function App() {
             <Route path="*" exact component={PageNotFound} />
           </Switch>
         </Router>
+        </SidebarProvider>
       </AuthContext.Provider>
     </div>
   );

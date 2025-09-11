@@ -3,6 +3,7 @@ import { useHistory, useParams, useLocation } from "react-router-dom";
 import { FiArrowLeft, FiEdit3, FiTrash2, FiX } from "react-icons/fi";
 import axios from "axios";
 import { useSnackbar } from "../helpers/SnackbarContext";
+import DashboardWrapper from '../components/DashboardWrapper';
 
 function ProductForm() {
   const history = useHistory();
@@ -128,7 +129,7 @@ function ProductForm() {
   };
 
   return (
-    <div className="dashboard">
+    <DashboardWrapper>
       <header className="header">
         <div className="header__left">
           <button className="iconBtn"
@@ -323,10 +324,36 @@ function ProductForm() {
                   </label>
                 </div>
 
-                {/* Interest Type Checkboxes - Mutually Exclusive */}
-                <div style={{ marginBottom: "20px" }}>
-                  <h4 style={{ marginBottom: "12px", color: "var(--primary-700)" }}>Interest Configuration</h4>
-                  <div style={{ display: "flex", gap: "24px", marginBottom: "16px" }}>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
+                  <button
+                    type="button"
+                    className="pill"
+                    onClick={() => setActiveTab("additional")}
+                    style={{
+                      padding: "8px 16px",
+                      fontSize: "14px"
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "additional" && (
+              <div>
+                {/* Interest Type Radio Buttons - Centered */}
+                <div style={{ 
+                  marginBottom: "32px", 
+                  display: "flex", 
+                  justifyContent: "center", 
+                  alignItems: "center",
+                  flexDirection: "column",
+                  gap: "16px"
+                }}>
+                  <h4 style={{ marginBottom: "12px", color: "var(--primary-700)", textAlign: "center" }}>Interest Configuration</h4>
+                  <div style={{ display: "flex", gap: "48px", justifyContent: "center" }}>
                     <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
                       <input
                         type="radio"
@@ -360,26 +387,15 @@ function ProductForm() {
                   </div>
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
-                  <button
-                    type="button"
-                    className="pill"
-                    onClick={() => setActiveTab("additional")}
-                    style={{
-                      padding: "8px 16px",
-                      fontSize: "14px"
-                    }}
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "additional" && (
-              <div>
-                <div style={{ marginBottom: "20px" }}>
-                  <h4 style={{ marginBottom: "12px", color: "var(--primary-700)" }}>Member Onboarding</h4>
+                {/* Member Onboarding Checkbox - Centered */}
+                <div style={{ 
+                  marginBottom: "20px", 
+                  display: "flex", 
+                  justifyContent: "center", 
+                  alignItems: "center",
+                  flexDirection: "column"
+                }}>
+                  <h4 style={{ marginBottom: "12px", color: "var(--primary-700)", textAlign: "center" }}>Member Onboarding</h4>
                   <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
                     <input
                       type="checkbox"
@@ -486,7 +502,7 @@ function ProductForm() {
           </form>
         </section>
       </main>
-    </div>
+    </DashboardWrapper>
   );
 }
 

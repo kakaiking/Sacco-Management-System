@@ -2,17 +2,18 @@ import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FiHome, FiTool, FiSettings, FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { AuthContext } from "../helpers/AuthContext";
+import { useSidebar } from "../helpers/SidebarContext";
 
 function Sidebar() {
-  const [isOpen, setIsOpen] = useState(false);
+  const { isOpen, setIsOpen } = useSidebar();
   const [adminOpen, setAdminOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
+  const [accountingOpen, setAccountingOpen] = useState(false);
   const location = useLocation();
   const { authState } = React.useContext(AuthContext);
 
   return (
     <>
-      <div className={`overlay ${isOpen ? "overlay--visible" : ""}`} onClick={() => setIsOpen(false)} />
       <aside className={`o-sidebar ${isOpen ? "open" : ""}`}>
         <div className="o-sidebar__brand">
           {authState.status && (
@@ -49,7 +50,7 @@ function Sidebar() {
         <hr style={{ margin: "0 16px", border: "none", borderTop: "1px solid var(--border)" }} />
 
         <nav className="o-menu">
-          <Link className={`o-menu__item ${location.pathname === "/" ? "active" : ""}`} to="/" onClick={() => setIsOpen(false)}>
+          <Link className={`o-menu__item ${location.pathname === "/" ? "active" : ""}`} to="/">
             <span className="o-menu__icon"><FiHome /></span>
             <span className="o-menu__label">Home</span>
           </Link>
@@ -64,9 +65,9 @@ function Sidebar() {
           
           {adminOpen && (
             <div className="o-submenu">
-              <Link className={`o-submenu__item ${location.pathname === "/member-maintenance" ? "active" : ""}`} to="/member-maintenance" onClick={() => setIsOpen(false)}>Member Maintenance</Link>
-              <Link className={`o-submenu__item ${location.pathname === "/createpost" ? "active" : ""}`} to="/createpost" onClick={() => setIsOpen(false)}>User Maintenance</Link>
-              {/* <button className="o-submenu__item" disabled>Role Maintenance</button> */}
+              <Link className={`o-submenu__item ${location.pathname === "/member-maintenance" ? "active" : ""}`} to="/member-maintenance">Member Maintenance</Link>
+              <Link className={`o-submenu__item ${location.pathname === "/createpost" ? "active" : ""}`} to="/createpost">User Maintenance</Link>
+              <Link className={`o-submenu__item ${location.pathname === "/role-maintenance" ? "active" : ""}`} to="/role-maintenance">Role Maintenance</Link>
             </div>
           )}
 
@@ -78,7 +79,19 @@ function Sidebar() {
 
           {configOpen && (
             <div className="o-submenu">
-              <Link className={`o-submenu__item ${location.pathname === "/product-maintenance" ? "active" : ""}`} to="/product-maintenance" onClick={() => setIsOpen(false)}>Product Maintenance</Link>
+              <Link className={`o-submenu__item ${location.pathname === "/product-maintenance" ? "active" : ""}`} to="/product-maintenance">Product Maintenance</Link>
+            </div>
+          )}
+
+          <Link className={`o-menu__item`} type="button" onClick={() => setAccountingOpen(v => !v)}>
+            <span className="o-menu__icon"><FiSettings /></span>
+            <span className="o-menu__label">Accounting</span>
+            <button className={`o-menu__arrow ${accountingOpen ? "up" : "down"}`}>{accountingOpen ? <FiChevronUp /> : <FiChevronDown />}</button>
+          </Link>
+
+          {accountingOpen && (
+            <div className="o-submenu">
+              <Link className={`o-submenu__item ${location.pathname === "/accounts-management" ? "active" : ""}`} to="/accounts-management">Accounts Management</Link>
             </div>
           )}
         </nav>
