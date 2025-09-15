@@ -1,14 +1,17 @@
-import React, { useEffect } from "react";
+import React, { useContext, useEffect } from "react";
 import { useHistory } from "react-router-dom";
+import { AuthContext } from "../helpers/AuthContext";
 
 function Admin() {
   const history = useHistory();
+  const { authState, isLoading } = useContext(AuthContext);
 
   useEffect(() => {
-    if (!localStorage.getItem("accessToken")) {
+    // Only redirect if authentication check is complete and user is not authenticated
+    if (!isLoading && !authState.status) {
       history.push("/login");
     }
-  }, [history]);
+  }, [authState, isLoading, history]);
 
   return (
     <div className="dashboard">

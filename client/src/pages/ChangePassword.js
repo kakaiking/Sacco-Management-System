@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
+import { AuthContext } from "../helpers/AuthContext";
 import axios from "axios";
 
 function ChangePassword() {

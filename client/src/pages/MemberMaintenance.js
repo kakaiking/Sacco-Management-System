@@ -1,20 +1,23 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useHistory } from "react-router-dom";
 import axios from "axios";
 import { FiEye, FiEdit3, FiTrash2, FiCheckCircle, FiClock, FiRotateCcw, FiXCircle } from "react-icons/fi";
 import { FaPlus } from 'react-icons/fa';
 import DashboardWrapper from '../components/DashboardWrapper';
 import { useSnackbar } from "../helpers/SnackbarContext";
+import { AuthContext } from "../helpers/AuthContext";
 
 function MemberMaintenance() {
   const history = useHistory();
   const { showMessage } = useSnackbar();
+  const { authState, isLoading } = useContext(AuthContext);
 
   useEffect(() => {
-    if (!localStorage.getItem("accessToken")) {
+    // Only redirect if authentication check is complete and user is not authenticated
+    if (!isLoading && !authState.status) {
       history.push("/login");
     }
-  }, [history]);
+  }, [authState, isLoading, history]);
 
   const [members, setMembers] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
@@ -24,6 +27,8 @@ function MemberMaintenance() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusAction, setStatusAction] = useState("");
   const [verifierRemarks, setVerifierRemarks] = useState("");
+  const [sortField, setSortField] = useState("memberNo");
+  const [sortDirection, setSortDirection] = useState("asc");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -54,10 +59,39 @@ function MemberMaintenance() {
     return c;
   }, [members]);
 
+  const sortedMembers = useMemo(() => {
+    const list = Array.isArray(members) ? members : [];
+    return [...list].sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+
+      // Handle date sorting
+      if (sortField === 'dateOfBirth') {
+        aValue = new Date(aValue);
+        bValue = new Date(bValue);
+      }
+
+      // Handle string sorting (case insensitive)
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      // Handle null/undefined values
+      if (aValue == null && bValue == null) return 0;
+      if (aValue == null) return sortDirection === 'asc' ? 1 : -1;
+      if (bValue == null) return sortDirection === 'asc' ? -1 : 1;
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [members, sortField, sortDirection]);
+
   // Selection functions
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedMembers(members.map(m => m.id));
+      setSelectedMembers(sortedMembers.map(m => m.id));
     } else {
       setSelectedMembers([]);
     }
@@ -71,8 +105,8 @@ function MemberMaintenance() {
     }
   };
 
-  const isAllSelected = selectedMembers.length === members.length && members.length > 0;
-  const isIndeterminate = selectedMembers.length > 0 && selectedMembers.length < members.length;
+  const isAllSelected = selectedMembers.length === sortedMembers.length && sortedMembers.length > 0;
+  const isIndeterminate = selectedMembers.length > 0 && selectedMembers.length < sortedMembers.length;
 
   // Show/hide batch actions based on selection
   useEffect(() => {
@@ -175,6 +209,28 @@ function MemberMaintenance() {
               <option value="Pending">Pending</option>
               <option value="Returned">Returned</option>
               <option value="Rejected">Rejected</option>
+            </select>
+
+            <select 
+              className="statusSelect" 
+              value={`${sortField}-${sortDirection}`} 
+              onChange={e => {
+                const [field, direction] = e.target.value.split('-');
+                setSortField(field);
+                setSortDirection(direction);
+              }}
+              style={{ marginLeft: "12px" }}
+            >
+              <option value="memberNo-asc">Member No (A-Z)</option>
+              <option value="memberNo-desc">Member No (Z-A)</option>
+              <option value="firstName-asc">First Name (A-Z)</option>
+              <option value="firstName-desc">First Name (Z-A)</option>
+              <option value="lastName-asc">Last Name (A-Z)</option>
+              <option value="lastName-desc">Last Name (Z-A)</option>
+              <option value="dateOfBirth-asc">Date of Birth (Oldest)</option>
+              <option value="dateOfBirth-desc">Date of Birth (Newest)</option>
+              <option value="status-asc">Status (A-Z)</option>
+              <option value="status-desc">Status (Z-A)</option>
             </select>
 
             <div className="searchWrapper">
@@ -291,19 +347,54 @@ function MemberMaintenance() {
                       style={{ cursor: "pointer" }}
                     />
                   </th>
-                  <th>Id</th>
-                  <th>First Name</th>
-                  <th>Last Name</th>
+                  <th>
+                    Member No
+                    {sortField === 'memberNo' && (
+                      <span style={{ marginLeft: '8px', color: 'var(--primary-500)' }}>
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </th>
+                  <th>
+                    First Name
+                    {sortField === 'firstName' && (
+                      <span style={{ marginLeft: '8px', color: 'var(--primary-500)' }}>
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </th>
+                  <th>
+                    Last Name
+                    {sortField === 'lastName' && (
+                      <span style={{ marginLeft: '8px', color: 'var(--primary-500)' }}>
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </th>
                   <th>Gender</th>
-                  <th>Date of Birth</th>
+                  <th>
+                    Date of Birth
+                    {sortField === 'dateOfBirth' && (
+                      <span style={{ marginLeft: '8px', color: 'var(--primary-500)' }}>
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </th>
                   <th>Nationality</th>
                   <th>ID Number</th>
-                  <th>Status</th>
+                  <th>
+                    Status
+                    {sortField === 'status' && (
+                      <span style={{ marginLeft: '8px', color: 'var(--primary-500)' }}>
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {members.map(m => (
+                {sortedMembers.map(m => (
                   <tr key={m.id}>
                     <td>
                       <input

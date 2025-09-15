@@ -1560,7 +1560,7 @@ button {
 }
 
 .cards--status {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 20px;
 }
 
@@ -1579,9 +1579,9 @@ button {
   margin: 6px 0 8px;
 }
 
-/* Status Cards with Teal-themed SVG backgrounds */
+/* Status Cards with consistent color schemes */
 .card--approved {
-  background: linear-gradient(135deg, #20b2aa, #1a9b94);
+  background: linear-gradient(135deg, #10b981, #059669);
   color: white;
   position: relative;
   overflow: hidden;
@@ -1600,7 +1600,7 @@ button {
 }
 
 .card--pending {
-  background: linear-gradient(135deg, #ff6b35, #e55a2b);
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
   color: white;
   position: relative;
   overflow: hidden;
@@ -1619,7 +1619,7 @@ button {
 }
 
 .card--returned {
-  background: linear-gradient(135deg, #6c757d, #495057);
+  background: linear-gradient(135deg, #f97316, #ea580c);
   color: white;
   position: relative;
   overflow: hidden;
@@ -1638,7 +1638,7 @@ button {
 }
 
 .card--rejected {
-  background: linear-gradient(135deg, #2c3e50, #1a252f);
+  background: linear-gradient(135deg, #ef4444, #dc2626);
   color: white;
   position: relative;
   overflow: hidden;
@@ -1685,6 +1685,104 @@ button {
 .card--pending .card__kpi,
 .card--returned .card__kpi,
 .card--rejected .card__kpi {
+  color: white;
+  font-size: 32px;
+  margin: 0;
+}
+
+/* User Status Cards */
+.card--active {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.card--active::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+  animation: float 20s linear infinite;
+  pointer-events: none;
+}
+
+.card--inactive {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.card--inactive::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M30 20l10 10-10 10-10-10 10-10zm0 20l10 10-10 10-10-10 10-10z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+  animation: float 35s linear infinite reverse;
+  pointer-events: none;
+}
+
+.card--locked {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.card--locked::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M30 15c-2.8 0-5 2.2-5 5v5h-5c-1.1 0-2 .9-2 2v15c0 1.1.9 2 2 2h20c1.1 0 2-.9 2-2V27c0-1.1-.9-2-2-2h-5v-5c0-2.8-2.2-5-5-5z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+  animation: float 40s linear infinite;
+  pointer-events: none;
+}
+
+.card--pending-password {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.card--pending-password::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M30 10c-5.5 0-10 4.5-10 10v5h-5c-1.1 0-2 .9-2 2v15c0 1.1.9 2 2 2h20c1.1 0 2-.9 2-2V27c0-1.1-.9-2-2-2h-5v-5c0-5.5-4.5-10-10-10z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+  animation: float 25s linear infinite reverse;
+  pointer-events: none;
+}
+
+.card--active h4,
+.card--inactive h4,
+.card--locked h4,
+.card--pending-password h4 {
+  color: white;
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card--active .card__kpi,
+.card--inactive .card__kpi,
+.card--locked .card__kpi,
+.card--pending-password .card__kpi {
   color: white;
   font-size: 32px;
   margin: 0;

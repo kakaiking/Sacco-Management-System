@@ -1,19 +1,22 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useHistory } from "react-router-dom";
 import { FiEye, FiEdit3, FiTrash2, FiCheckCircle, FiClock, FiRotateCcw, FiXCircle } from "react-icons/fi";
 import { FaPlus } from 'react-icons/fa';
 import DashboardWrapper from '../components/DashboardWrapper';
 import { useSnackbar } from "../helpers/SnackbarContext";
+import { AuthContext } from "../helpers/AuthContext";
 
 function RoleMaintenance() {
   const history = useHistory();
+  const { authState, isLoading } = useContext(AuthContext);
   const { showMessage } = useSnackbar();
 
   useEffect(() => {
-    if (!localStorage.getItem("accessToken")) {
+    // Only redirect if authentication check is complete and user is not authenticated
+    if (!isLoading && !authState.status) {
       history.push("/login");
     }
-  }, [history]);
+  }, [authState, isLoading, history]);
 
   // Mock data for roles
   const [roles, setRoles] = useState([

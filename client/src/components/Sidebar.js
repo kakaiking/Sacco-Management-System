@@ -66,8 +66,9 @@ function Sidebar() {
           {adminOpen && (
             <div className="o-submenu">
               <Link className={`o-submenu__item ${location.pathname === "/member-maintenance" ? "active" : ""}`} to="/member-maintenance">Member Maintenance</Link>
-              <Link className={`o-submenu__item ${location.pathname === "/createpost" ? "active" : ""}`} to="/createpost">User Maintenance</Link>
+              <Link className={`o-submenu__item ${location.pathname === "/user-maintenance" ? "active" : ""}`} to="/user-maintenance">User Maintenance</Link>
               <Link className={`o-submenu__item ${location.pathname === "/role-maintenance" ? "active" : ""}`} to="/role-maintenance">Role Maintenance</Link>
+              <Link className={`o-submenu__item ${location.pathname === "/loan-calculator" ? "active" : ""}`} to="/loan-calculator">Loan Calculator</Link>
             </div>
           )}
 
@@ -80,6 +81,8 @@ function Sidebar() {
           {configOpen && (
             <div className="o-submenu">
               <Link className={`o-submenu__item ${location.pathname === "/product-maintenance" ? "active" : ""}`} to="/product-maintenance">Product Maintenance</Link>
+              <Link className={`o-submenu__item ${location.pathname === "/sacco-maintenance" ? "active" : ""}`} to="/sacco-maintenance">Sacco Maintenance</Link>
+              <Link className={`o-submenu__item ${location.pathname === "/branch-maintenance" ? "active" : ""}`} to="/branch-maintenance">Branch Maintenance</Link>
             </div>
           )}
 

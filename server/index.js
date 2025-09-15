@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require("express");
 const app = express();
 const cors = require("cors");
@@ -13,6 +14,7 @@ app.use("/posts", postRouter);
 const commentsRouter = require("./routes/Comments");
 app.use("/comments", commentsRouter);
 const usersRouter = require("./routes/Users");
+app.use("/users", usersRouter);
 app.use("/auth", usersRouter);
 const likesRouter = require("./routes/Likes");
 app.use("/likes", likesRouter);
@@ -22,6 +24,10 @@ const productsRouter = require("./routes/Products");
 app.use("/products", productsRouter);
 const accountsRouter = require("./routes/Accounts");
 app.use("/accounts", accountsRouter);
+const saccoRouter = require("./routes/Sacco");
+app.use("/sacco", saccoRouter);
+const branchRouter = require("./routes/Branch");
+app.use("/branch", branchRouter);
 
 db.sequelize.sync().then(() => {
   try {

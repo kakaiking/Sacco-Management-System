@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useHistory, useParams, useLocation } from "react-router-dom";
 import { FiArrowLeft, FiEdit3, FiTrash2, FiX } from "react-icons/fi";
 import axios from "axios";
 import { useSnackbar } from "../helpers/SnackbarContext";
+import { AuthContext } from "../helpers/AuthContext";
 import DashboardWrapper from '../components/DashboardWrapper';
 
 function ProductForm() {
   const history = useHistory();
+  const { authState, isLoading } = useContext(AuthContext);
   const { id } = useParams();
   const { search } = useLocation();
   const { showMessage } = useSnackbar();
@@ -36,10 +38,11 @@ function ProductForm() {
   const [activeTab, setActiveTab] = useState("details");
 
   useEffect(() => {
-    if (!localStorage.getItem("accessToken")) {
+    // Only redirect if authentication check is complete and user is not authenticated
+    if (!isLoading && !authState.status) {
       history.push("/login");
     }
-  }, [history]);
+  }, [authState, isLoading, history]);
 
   // Generate product ID for new products
   const generateProductId = () => {

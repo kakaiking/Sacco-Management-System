@@ -4,15 +4,16 @@ import { AuthContext } from "../helpers/AuthContext";
 import axios from "axios";
 
 function Home() {
-  const { authState } = useContext(AuthContext);
+  const { authState, isLoading } = useContext(AuthContext);
   let history = useHistory();
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
-    if (!localStorage.getItem("accessToken")) {
+    // Only redirect if authentication check is complete and user is not authenticated
+    if (!isLoading && !authState.status) {
       history.push("/login");
     }
-  }, [history]);
+  }, [authState, isLoading, history]);
 
   useEffect(() => {
     const controller = new AbortController();
