@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
 import { AuthContext } from "../helpers/AuthContext";
 import axios from "axios";
+import DashboardWrapper from "../components/DashboardWrapper";
 
 function Home() {
   const { authState, isLoading } = useContext(AuthContext);
@@ -33,7 +34,7 @@ function Home() {
   }, []);
 
   return (
-    <div className="dashboard">
+    <DashboardWrapper>
       <header className="header">
         <div className="header__left">
           <div className="brand">
@@ -62,8 +63,10 @@ function Home() {
               <li>Mary Njoroge • KES 2,000</li>
             </ul>
           </div>
+        </section>
 
-          <div className="card">
+        <section className="announcements-section">
+          <div className="card announcements-card">
             <h3>Announcements</h3>
             <ul className="list">
               <li>Annual General Meeting – Oct 26th</li>
@@ -100,7 +103,7 @@ function Home() {
           </div>
         </section>
       </main>
-    </div>
+    </DashboardWrapper>
   );
 }
 

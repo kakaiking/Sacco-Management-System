@@ -4,18 +4,26 @@ import axios from "axios";
 import { FiEye, FiEdit3, FiTrash2, FiCheckCircle, FiClock, FiRotateCcw, FiXCircle } from "react-icons/fi";
 import { FaPlus } from 'react-icons/fa';
 import DashboardWrapper from '../components/DashboardWrapper';
+import Pagination from '../components/Pagination';
 import { useSnackbar } from "../helpers/SnackbarContext";
 import { AuthContext } from "../helpers/AuthContext";
+import { usePermissions } from "../hooks/usePermissions";
+import { PERMISSIONS } from "../helpers/PermissionUtils";
+import frontendLoggingService from "../services/frontendLoggingService";
 
 function MemberMaintenance() {
   const history = useHistory();
   const { showMessage } = useSnackbar();
   const { authState, isLoading } = useContext(AuthContext);
+  const { canAdd, canEdit, canDelete, canApprove } = usePermissions();
 
   useEffect(() => {
     // Only redirect if authentication check is complete and user is not authenticated
     if (!isLoading && !authState.status) {
       history.push("/login");
+    } else if (!isLoading && authState.status) {
+      // Log page view when user is authenticated
+      frontendLoggingService.logView("Member", null, null, "Viewed Member Maintenance page");
     }
   }, [authState, isLoading, history]);
 
@@ -27,8 +35,10 @@ function MemberMaintenance() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusAction, setStatusAction] = useState("");
   const [verifierRemarks, setVerifierRemarks] = useState("");
-  const [sortField, setSortField] = useState("memberNo");
-  const [sortDirection, setSortDirection] = useState("asc");
+  const [sortField] = useState("memberNo");
+  const [sortDirection] = useState("asc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -88,10 +98,29 @@ function MemberMaintenance() {
     });
   }, [members, sortField, sortDirection]);
 
+  // Pagination logic
+  const paginatedMembers = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return sortedMembers.slice(startIndex, endIndex);
+  }, [sortedMembers, currentPage, itemsPerPage]);
+
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    setSelectedMembers([]); // Clear selection when changing pages
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+    setSelectedMembers([]); // Clear selection
+  };
+
   // Selection functions
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedMembers(sortedMembers.map(m => m.id));
+      setSelectedMembers(paginatedMembers.map(m => m.id));
     } else {
       setSelectedMembers([]);
     }
@@ -105,8 +134,8 @@ function MemberMaintenance() {
     }
   };
 
-  const isAllSelected = selectedMembers.length === sortedMembers.length && sortedMembers.length > 0;
-  const isIndeterminate = selectedMembers.length > 0 && selectedMembers.length < sortedMembers.length;
+  const isAllSelected = selectedMembers.length === paginatedMembers.length && paginatedMembers.length > 0;
+  const isIndeterminate = selectedMembers.length > 0 && selectedMembers.length < paginatedMembers.length;
 
   // Show/hide batch actions based on selection
   useEffect(() => {
@@ -121,16 +150,45 @@ function MemberMaintenance() {
 
   const confirmStatusChange = async () => {
     try {
+      // Get before data for logging
+      const beforeData = selectedMembers.map(memberId => {
+        const member = members.find(m => m.id === memberId);
+        return {
+          id: memberId,
+          memberNo: member?.memberNo,
+          firstName: member?.firstName,
+          lastName: member?.lastName,
+          status: member?.status
+        };
+      });
+
       const promises = selectedMembers.map(memberId => 
         axios.put(`http://localhost:3001/members/${memberId}`, {
           status: statusAction,
           verifierRemarks: verifierRemarks
-        }, { 
-          headers: { accessToken: localStorage.getItem("accessToken") } 
+        }, {
+          headers: { accessToken: localStorage.getItem("accessToken") }
         })
       );
       
       await Promise.all(promises);
+      
+      // Prepare after data for logging
+      const afterData = beforeData.map(member => ({
+        ...member,
+        status: statusAction,
+        verifierRemarks: verifierRemarks
+      }));
+
+      // Log the update action with before/after data
+      frontendLoggingService.logUpdate(
+        "Member", 
+        selectedMembers.join(','), 
+        `${selectedMembers.length} members`, 
+        beforeData, 
+        afterData, 
+        `Updated status to ${statusAction} for ${selectedMembers.length} members`
+      );
       
       // Update local state
       setMembers(prev => prev.map(member => 
@@ -203,7 +261,10 @@ function MemberMaintenance() {
 
         <section className="card" style={{ padding: 12 }}>
           <div className="tableToolbar">
-            <select className="statusSelect" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <select className="statusSelect" value={statusFilter} onChange={e => {
+              frontendLoggingService.logFilter("Status", e.target.value, "Member", `Filtered members by status: ${e.target.value || 'All'}`);
+              setStatusFilter(e.target.value);
+            }}>
               <option value="">All Statuses</option>
               <option value="Approved">Approved</option>
               <option value="Pending">Pending</option>
@@ -211,77 +272,93 @@ function MemberMaintenance() {
               <option value="Rejected">Rejected</option>
             </select>
 
-            <select 
-              className="statusSelect" 
-              value={`${sortField}-${sortDirection}`} 
-              onChange={e => {
-                const [field, direction] = e.target.value.split('-');
-                setSortField(field);
-                setSortDirection(direction);
-              }}
-              style={{ marginLeft: "12px" }}
-            >
-              <option value="memberNo-asc">Member No (A-Z)</option>
-              <option value="memberNo-desc">Member No (Z-A)</option>
-              <option value="firstName-asc">First Name (A-Z)</option>
-              <option value="firstName-desc">First Name (Z-A)</option>
-              <option value="lastName-asc">Last Name (A-Z)</option>
-              <option value="lastName-desc">Last Name (Z-A)</option>
-              <option value="dateOfBirth-asc">Date of Birth (Oldest)</option>
-              <option value="dateOfBirth-desc">Date of Birth (Newest)</option>
-              <option value="status-asc">Status (A-Z)</option>
-              <option value="status-desc">Status (Z-A)</option>
-            </select>
 
             <div className="searchWrapper">
-              <input className="searchInput" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search members..." />
+              <input className="searchInput" value={search} onChange={e => {
+                if (e.target.value.length > 2 || e.target.value.length === 0) {
+                  frontendLoggingService.logSearch(e.target.value, "Member", null, `Searched for members: "${e.target.value}"`);
+                }
+                setSearch(e.target.value);
+              }} placeholder="Search members..." />
               <span className="searchIcon">🔍</span>
             </div>
 
 
-            <button 
-              className="pill" 
-              onClick={() => history.push("/member/new")}
-              style={{
-                backgroundColor: "var(--primary-500)",
-                color: "white",
-                border: "none",
-                padding: "8px 16px",
-                borderRadius: "12px",
-                fontSize: "16px",
-                fontWeight: "600",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                boxShadow: "0 2px 8px rgba(63, 115, 179, 0.2)"
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = "var(--primary-600)";
-                e.target.style.transform = "translateY(-2px)";
-                e.target.style.boxShadow = "0 4px 12px rgba(63, 115, 179, 0.3)";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = "var(--primary-500)";
-                e.target.style.transform = "translateY(0)";
-                e.target.style.boxShadow = "0 2px 8px rgba(63, 115, 179, 0.2)";
-              }}
-              title="Add Member"
-            >
-              <FaPlus />
-              Add Member
-            </button>
+            {canAdd(PERMISSIONS.MEMBER_MAINTENANCE) ? (
+              <button 
+                className="pill" 
+                onClick={() => {
+                  frontendLoggingService.logButtonClick("Add Member", "Member", null, "Clicked Add Member button");
+                  history.push("/member/new");
+                }}
+                style={{
+                  backgroundColor: "var(--primary-500)",
+                  color: "white",
+                  border: "none",
+                  padding: "8px 16px",
+                  borderRadius: "12px",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  boxShadow: "0 2px 8px rgba(63, 115, 179, 0.2)"
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = "var(--primary-600)";
+                  e.target.style.transform = "translateY(-2px)";
+                  e.target.style.boxShadow = "0 4px 12px rgba(63, 115, 179, 0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = "var(--primary-500)";
+                  e.target.style.transform = "translateY(0)";
+                  e.target.style.boxShadow = "0 2px 8px rgba(63, 115, 179, 0.2)";
+                }}
+                title="Add Member"
+              >
+                <FaPlus />
+                Add Member
+              </button>
+            ) : (
+              <button 
+                className="pill" 
+                onClick={() => showMessage("Your role lacks permission to add members", "error")}
+                style={{
+                  backgroundColor: "var(--muted-text)",
+                  color: "white",
+                  border: "none",
+                  padding: "8px 16px",
+                  borderRadius: "12px",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  cursor: "not-allowed",
+                  opacity: 0.6
+                }}
+                title="Add Member - No Permission"
+                disabled
+              >
+                <FaPlus />
+                Add Member
+              </button>
+            )}
 
             {/* Batch Action Buttons */}
-            {showBatchActions && (
+            {showBatchActions && canApprove(PERMISSIONS.MEMBER_MAINTENANCE) && (
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                 <span style={{ fontSize: "14px", color: "var(--muted-text)", marginRight: "8px" }}>
                   {selectedMembers.length} selected
                 </span>
                 <button 
                   className="pill" 
-                  onClick={() => handleStatusChange("Approved")}
+                  onClick={() => {
+                    frontendLoggingService.logButtonClick("Approve Members", "Member", null, `Clicked Approve button for ${selectedMembers.length} selected members`);
+                    handleStatusChange("Approved");
+                  }}
                   style={{
                     backgroundColor: "#10b981",
                     color: "white",
@@ -297,7 +374,10 @@ function MemberMaintenance() {
                 </button>
                 <button 
                   className="pill" 
-                  onClick={() => handleStatusChange("Returned")}
+                  onClick={() => {
+                    frontendLoggingService.logButtonClick("Return Members", "Member", null, `Clicked Return button for ${selectedMembers.length} selected members`);
+                    handleStatusChange("Returned");
+                  }}
                   style={{
                     backgroundColor: "#f97316",
                     color: "white",
@@ -313,7 +393,10 @@ function MemberMaintenance() {
                 </button>
                 <button 
                   className="pill" 
-                  onClick={() => handleStatusChange("Rejected")}
+                  onClick={() => {
+                    frontendLoggingService.logButtonClick("Reject Members", "Member", null, `Clicked Reject button for ${selectedMembers.length} selected members`);
+                    handleStatusChange("Rejected");
+                  }}
                   style={{
                     backgroundColor: "#ef4444",
                     color: "white",
@@ -394,7 +477,7 @@ function MemberMaintenance() {
                 </tr>
               </thead>
               <tbody>
-                {sortedMembers.map(m => (
+                {paginatedMembers.map(m => (
                   <tr key={m.id}>
                     <td>
                       <input
@@ -446,30 +529,76 @@ function MemberMaintenance() {
                       </div>
                     </td>
                     <td className="actions">
-                      <button className="action-btn action-btn--view" onClick={() => history.push(`/member/${m.id}`)} title="View">
+                      <button className="action-btn action-btn--view" onClick={() => {
+                        frontendLoggingService.logView("Member", m.id, `${m.firstName} ${m.lastName}`, "Viewed member details");
+                        history.push(`/member/${m.id}`);
+                      }} title="View">
                         <FiEye />
                       </button>
-                      <button className="action-btn action-btn--edit" onClick={() => history.push(`/member/${m.id}?edit=1`)} title="Update">
-                        <FiEdit3 />
-                      </button>
-                      <button className="action-btn action-btn--delete" onClick={async () => {
-                        try {
-                          await axios.delete(`http://localhost:3001/members/${m.id}`, { headers: { accessToken: localStorage.getItem("accessToken") } });
-                          setMembers(curr => curr.filter(x => x.id !== m.id));
-                          showMessage("Member deleted successfully", "success");
-                        } catch (err) {
-                          const msg = err?.response?.data?.error || "Failed to delete member";
-                          showMessage(msg, "error");
-                        }
-                      }} title="Delete">
-                        <FiTrash2 />
-                      </button>
+                      {canEdit(PERMISSIONS.MEMBER_MAINTENANCE) ? (
+                        <button className="action-btn action-btn--edit" onClick={() => {
+                          frontendLoggingService.logButtonClick("Edit Member", "Member", m.id, `Clicked Edit button for member: ${m.firstName} ${m.lastName}`);
+                          history.push(`/member/${m.id}?edit=1`);
+                        }} title="Update">
+                          <FiEdit3 />
+                        </button>
+                      ) : (
+                        <button 
+                          className="action-btn action-btn--edit" 
+                          onClick={() => showMessage("Your role lacks permission to edit members", "error")} 
+                          title="Update - No Permission"
+                          style={{ opacity: 0.5, cursor: "not-allowed" }}
+                          disabled
+                        >
+                          <FiEdit3 />
+                        </button>
+                      )}
+                      {canDelete(PERMISSIONS.MEMBER_MAINTENANCE) ? (
+                        <button className="action-btn action-btn--delete" onClick={async () => {
+                          try {
+                            // Log the delete action with member data before deletion
+                            frontendLoggingService.logDelete("Member", m.id, `${m.firstName} ${m.lastName}`, {
+                              memberNo: m.memberNo,
+                              firstName: m.firstName,
+                              lastName: m.lastName,
+                              status: m.status
+                            }, `Deleted member: ${m.firstName} ${m.lastName}`);
+                            
+                            await axios.delete(`http://localhost:3001/members/${m.id}`, { headers: { accessToken: localStorage.getItem("accessToken") } });
+                            setMembers(curr => curr.filter(x => x.id !== m.id));
+                            showMessage("Member deleted successfully", "success");
+                          } catch (err) {
+                            const msg = err?.response?.data?.error || "Failed to delete member";
+                            showMessage(msg, "error");
+                          }
+                        }} title="Delete">
+                          <FiTrash2 />
+                        </button>
+                      ) : (
+                        <button 
+                          className="action-btn action-btn--delete" 
+                          onClick={() => showMessage("Your role lacks permission to delete members", "error")} 
+                          title="Delete - No Permission"
+                          style={{ opacity: 0.5, cursor: "not-allowed" }}
+                          disabled
+                        >
+                          <FiTrash2 />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalItems={sortedMembers.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
         </section>
       </main>
 

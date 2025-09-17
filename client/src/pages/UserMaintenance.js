@@ -1,9 +1,10 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useHistory } from "react-router-dom";
 import axios from "axios";
-import { FiEye, FiEdit3, FiTrash2, FiCheckCircle, FiClock, FiRotateCcw, FiXCircle, FiLock, FiUnlock, FiMail } from "react-icons/fi";
+import { FiEye, FiEdit3, FiCheckCircle, FiClock, FiXCircle, FiLock, FiUnlock, FiMail } from "react-icons/fi";
 import { FaPlus } from 'react-icons/fa';
 import DashboardWrapper from '../components/DashboardWrapper';
+import Pagination from '../components/Pagination';
 import { useSnackbar } from "../helpers/SnackbarContext";
 import { AuthContext } from "../helpers/AuthContext";
 
@@ -27,8 +28,10 @@ function UserMaintenance() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusAction, setStatusAction] = useState("");
   const [verifierRemarks, setVerifierRemarks] = useState("");
-  const [sortField, setSortField] = useState("userId");
-  const [sortDirection, setSortDirection] = useState("asc");
+  const [sortField] = useState("userId");
+  const [sortDirection] = useState("asc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -62,6 +65,18 @@ function UserMaintenance() {
     };
   }, [users]);
 
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    setSelectedUsers([]); // Clear selection when changing pages
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+    setSelectedUsers([]); // Clear selection
+  };
+
   const handleSelectUser = (userId, checked) => {
     if (checked) {
       setSelectedUsers(prev => [...prev, userId]);
@@ -72,14 +87,12 @@ function UserMaintenance() {
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedUsers(sortedUsers.map(u => u.id));
+      setSelectedUsers(paginatedUsers.map(u => u.id));
     } else {
       setSelectedUsers([]);
     }
   };
 
-  const isAllSelected = selectedUsers.length === users.length && users.length > 0;
-  const isIndeterminate = selectedUsers.length > 0 && selectedUsers.length < users.length;
 
   // Check if all selected users can transition to a specific status
   const canTransitionToStatus = (targetStatus) => {
@@ -108,14 +121,6 @@ function UserMaintenance() {
     });
   };
 
-  // Check if all selected users are already in a specific status (for reject button)
-  const areAllSelectedUsersInStatus = (status) => {
-    if (selectedUsers.length === 0) return false;
-    return selectedUsers.every(userId => {
-      const user = users.find(u => u.id === userId);
-      return user && user.status === status;
-    });
-  };
 
   // Show/hide batch actions based on selection
   useEffect(() => {
@@ -245,6 +250,16 @@ function UserMaintenance() {
     });
   }, [users, sortField, sortDirection]);
 
+  // Pagination logic
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return sortedUsers.slice(startIndex, endIndex);
+  }, [sortedUsers, currentPage, itemsPerPage]);
+
+  const isAllSelected = selectedUsers.length === paginatedUsers.length && paginatedUsers.length > 0;
+  const isIndeterminate = selectedUsers.length > 0 && selectedUsers.length < paginatedUsers.length;
+
   return (
     <DashboardWrapper>
       <header className="header">
@@ -314,33 +329,6 @@ function UserMaintenance() {
               <option value="Locked">Locked</option>
             </select>
 
-            <select 
-              className="statusSelect" 
-              value={`${sortField}-${sortDirection}`} 
-              onChange={e => {
-                const [field, direction] = e.target.value.split('-');
-                setSortField(field);
-                setSortDirection(direction);
-              }}
-              style={{ marginLeft: "12px" }}
-            >
-              <option value="userId-asc">User ID (A-Z)</option>
-              <option value="userId-desc">User ID (Z-A)</option>
-              <option value="username-asc">Username (A-Z)</option>
-              <option value="username-desc">Username (Z-A)</option>
-              <option value="firstName-asc">First Name (A-Z)</option>
-              <option value="firstName-desc">First Name (Z-A)</option>
-              <option value="lastName-asc">Last Name (A-Z)</option>
-              <option value="lastName-desc">Last Name (Z-A)</option>
-              <option value="email-asc">Email (A-Z)</option>
-              <option value="email-desc">Email (Z-A)</option>
-              <option value="role-asc">Role (A-Z)</option>
-              <option value="role-desc">Role (Z-A)</option>
-              <option value="status-asc">Status (A-Z)</option>
-              <option value="status-desc">Status (Z-A)</option>
-              <option value="createdOn-asc">Created (Oldest)</option>
-              <option value="createdOn-desc">Created (Newest)</option>
-            </select>
 
             <div className="searchWrapper">
               <input className="searchInput" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search users..." />
@@ -485,12 +473,11 @@ function UserMaintenance() {
                   <th>Name</th>
                   <th>Role</th>
                   <th>Status</th>
-                  <th>Created</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedUsers.map((user) => {
+                {paginatedUsers.map((user) => {
                   const statusColors = getStatusColor(user.status);
                   return (
                     <tr key={user.id}>
@@ -525,50 +512,49 @@ function UserMaintenance() {
                           {user.status}
                         </div>
                       </td>
-                      <td>{user.createdOn ? new Date(user.createdOn).toLocaleDateString() : ""}</td>
                       <td>
                         <div style={{ display: "flex", gap: "4px" }}>
                           <button
-                            className="iconBtn"
+                            className="action-btn action-btn--view"
                             onClick={() => history.push(`/user-form/${user.id}`)}
                             title="View"
                           >
-                            <FiEye className="icon" />
+                            <FiEye />
                           </button>
                           <button
-                            className="iconBtn"
+                            className="action-btn action-btn--edit"
                             onClick={() => history.push(`/user-form/${user.id}?edit=1`)}
                             title="Edit"
                           >
-                            <FiEdit3 className="icon" />
+                            <FiEdit3 />
                           </button>
                           {(user.status === "Pending Password" || user.status === "Active") && (
                             <button
-                              className="iconBtn"
+                              className="action-btn"
                               onClick={() => handleSingleAction(user.id, "resend-email")}
                               title="Resend Email"
-                              style={{ color: "#3b82f6" }}
+                              style={{ background: "#e0f2fe", color: "#0277bd" }}
                             >
-                              <FiMail className="icon" />
+                              <FiMail />
                             </button>
                           )}
                           {user.status === "Locked" ? (
                             <button
-                              className="iconBtn"
+                              className="action-btn"
                               onClick={() => handleSingleAction(user.id, "unlock")}
                               title="Unlock"
-                              style={{ color: "#059669" }}
+                              style={{ background: "#e8f5e8", color: "#059669" }}
                             >
-                              <FiUnlock className="icon" />
+                              <FiUnlock />
                             </button>
                           ) : (
                             <button
-                              className="iconBtn"
+                              className="action-btn"
                               onClick={() => handleSingleAction(user.id, "lock")}
                               title="Lock"
-                              style={{ color: "#6b7280" }}
+                              style={{ background: "#f3f4f6", color: "#6b7280" }}
                             >
-                              <FiLock className="icon" />
+                              <FiLock />
                             </button>
                           )}
                         </div>
@@ -579,6 +565,14 @@ function UserMaintenance() {
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalItems={sortedUsers.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
         </section>
 
         {/* Status Change Modal */}

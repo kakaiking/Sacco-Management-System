@@ -35,6 +35,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: "User",
     },
+    saccoId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: "SYSTEM",
+    },
     status: {
       type: DataTypes.ENUM("Pending Password", "Pending", "Active", "Inactive", "Locked"),
       allowNull: false,
@@ -96,13 +101,7 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   Users.associate = (models) => {
-    Users.hasMany(models.Likes, {
-      onDelete: "NO ACTION",
-    });
-
-    Users.hasMany(models.Posts, {
-      onDelete: "NO ACTION",
-    });
+    // Associations can be added here if needed
   };
 
   return Users;

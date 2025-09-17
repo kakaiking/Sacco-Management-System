@@ -1,10 +1,13 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useHistory, useParams, useLocation } from "react-router-dom";
-import { FiArrowLeft, FiEdit3, FiTrash2, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiSearch } from "react-icons/fi";
 import axios from "axios";
 import { useSnackbar } from "../helpers/SnackbarContext";
 import { AuthContext } from "../helpers/AuthContext";
 import DashboardWrapper from '../components/DashboardWrapper';
+import CurrencyLookupModal from '../components/CurrencyLookupModal';
+import SaccoLookupModal from '../components/SaccoLookupModal';
+import ChargesLookupModal from '../components/ChargesLookupModal';
 
 function ProductForm() {
   const history = useHistory();
@@ -18,24 +21,42 @@ function ProductForm() {
   const [form, setForm] = useState({
     productId: "",
     productName: "",
-    productStatus: "Pending",
+    saccoId: "",
+    chargeIds: "",
     currency: "",
-    isCreditInterest: false,
-    isDebitInterest: false,
+    interestRate: "",
     interestType: "",
     interestCalculationRule: "",
     interestFrequency: "",
+    isCreditInterest: false,
+    isDebitInterest: false,
+    needGuarantors: false,
+    maxGuarantors: "",
+    minGuarantors: "",
+    isSpecial: false,
+    maxSpecialUsers: "",
     appliedOnMemberOnboarding: false,
+    productStatus: "Pending",
+    status: "Pending",
     createdBy: "",
     createdOn: "",
     modifiedBy: "",
     modifiedOn: "",
     approvedBy: "",
     approvedOn: "",
-    status: "Pending",
   });
 
   const [activeTab, setActiveTab] = useState("details");
+
+  // Currency lookup modal state
+  const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
+  
+  // Sacco lookup modal state
+  const [isSaccoModalOpen, setIsSaccoModalOpen] = useState(false);
+  
+  // Charges lookup modal state
+  const [isChargesModalOpen, setIsChargesModalOpen] = useState(false);
+  const [selectedCharges, setSelectedCharges] = useState([]);
 
   useEffect(() => {
     // Only redirect if authentication check is complete and user is not authenticated
@@ -50,6 +71,30 @@ function ProductForm() {
     return `P-${randomNum}`;
   };
 
+  // Load existing charges by their IDs
+  const loadExistingCharges = async (chargeIds) => {
+    if (!chargeIds || chargeIds.length === 0) {
+      setSelectedCharges([]);
+      return;
+    }
+
+    try {
+      const response = await axios.get('http://localhost:3001/charges', {
+        headers: { accessToken: localStorage.getItem('accessToken') }
+      });
+      
+      const allCharges = response.data.entity || [];
+      const matchingCharges = allCharges.filter(charge => 
+        chargeIds.includes(charge.chargeId)
+      );
+      
+      setSelectedCharges(matchingCharges);
+    } catch (error) {
+      console.error('Error loading existing charges:', error);
+      setSelectedCharges([]);
+    }
+  };
+
   useEffect(() => {
     const load = async () => {
       if (!isCreate) {
@@ -60,22 +105,37 @@ function ProductForm() {
         setForm({
           productId: data.productId || "",
           productName: data.productName || "",
-          productStatus: data.productStatus || "Pending",
+          saccoId: data.saccoId || "",
+          chargeIds: data.chargeIds || "",
           currency: data.currency || "",
-          isCreditInterest: data.isCreditInterest || false,
-          isDebitInterest: data.isDebitInterest || false,
+          interestRate: data.interestRate || "",
           interestType: data.interestType || "",
           interestCalculationRule: data.interestCalculationRule || "",
           interestFrequency: data.interestFrequency || "",
+          isCreditInterest: data.isCreditInterest || false,
+          isDebitInterest: data.isDebitInterest || false,
+          needGuarantors: data.needGuarantors || false,
+          maxGuarantors: data.maxGuarantors || "",
+          minGuarantors: data.minGuarantors || "",
+          isSpecial: data.isSpecial || false,
+          maxSpecialUsers: data.maxSpecialUsers || "",
           appliedOnMemberOnboarding: data.appliedOnMemberOnboarding || false,
+          productStatus: data.productStatus || "Pending",
+          status: data.status || "Pending",
           createdBy: data.createdBy || "",
           createdOn: data.createdOn || "",
           modifiedBy: data.modifiedBy || "",
           modifiedOn: data.modifiedOn || "",
           approvedBy: data.approvedBy || "",
           approvedOn: data.approvedOn || "",
-          status: data.status || "Pending",
         });
+        
+        // Parse existing charge IDs if they exist
+        if (data.chargeIds) {
+          const chargeIdArray = data.chargeIds.split(',').map(id => id.trim()).filter(id => id);
+          // Fetch the actual charge objects
+          loadExistingCharges(chargeIdArray);
+        }
       } else {
         // Generate product ID for new products
         setForm(prev => ({ ...prev, productId: generateProductId() }));
@@ -98,7 +158,7 @@ function ProductForm() {
       if (isCreate) {
         payload.createdBy = localStorage.getItem("username") || "System";
         payload.createdOn = new Date().toISOString();
-        const res = await axios.post("http://localhost:3001/products", payload, {
+        await axios.post("http://localhost:3001/products", payload, {
           headers: { accessToken: localStorage.getItem("accessToken") },
         });
         showMessage("Product created successfully", "success");
@@ -116,20 +176,51 @@ function ProductForm() {
     }
   };
 
-  const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      try {
-        await axios.delete(`http://localhost:3001/products/${id}`, {
-          headers: { accessToken: localStorage.getItem("accessToken") },
-        });
-        showMessage("Product deleted successfully", "success");
-        history.push("/product-maintenance");
-      } catch (err) {
-        const msg = err?.response?.data?.error || "Failed to delete product";
-        showMessage(msg, "error");
-      }
-    }
+  // Currency lookup modal handlers
+  const handleOpenCurrencyModal = () => {
+    setIsCurrencyModalOpen(true);
   };
+
+  const handleCloseCurrencyModal = () => {
+    setIsCurrencyModalOpen(false);
+  };
+
+  const handleSelectCurrency = (selectedCurrency) => {
+    setForm(prev => ({ ...prev, currency: selectedCurrency.currencyCode }));
+    setIsCurrencyModalOpen(false);
+  };
+
+  // Sacco lookup modal handlers
+  const handleOpenSaccoModal = () => {
+    setIsSaccoModalOpen(true);
+  };
+
+  const handleCloseSaccoModal = () => {
+    setIsSaccoModalOpen(false);
+  };
+
+  const handleSelectSacco = (selectedSacco) => {
+    setForm(prev => ({ ...prev, saccoId: selectedSacco.saccoId }));
+    setIsSaccoModalOpen(false);
+  };
+
+  // Charges lookup modal handlers
+  const handleOpenChargesModal = () => {
+    setIsChargesModalOpen(true);
+  };
+
+  const handleCloseChargesModal = () => {
+    setIsChargesModalOpen(false);
+  };
+
+  const handleSelectCharges = (charges) => {
+    setSelectedCharges(charges);
+    // Convert charges array to comma-separated string for the form
+    const chargeIds = charges.map(charge => charge.chargeId).join(', ');
+    setForm(prev => ({ ...prev, chargeIds }));
+    setIsChargesModalOpen(false);
+  };
+
 
   return (
     <DashboardWrapper>
@@ -175,9 +266,11 @@ function ProductForm() {
                   Product Name
                   <input
                     className="inputa"
-                    value={`${form.productName}`.trim()}
-                    disabled={true}
-                    placeholder="Auto-generated"
+                    value={form.productName}
+                    onChange={e => setForm({ ...form, productName: e.target.value })}
+                    disabled={!isCreate && !isEdit}
+                    placeholder="Enter product name"
+                    required
                   />
                 </label>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -268,17 +361,71 @@ function ProductForm() {
               <div>
                 <div className="grid2">
                   <label>
+                    Sacco ID
+                    <div className="role-input-wrapper">
+                      <input
+                        type="text"
+                        className="input"
+                        value={form.saccoId}
+                        onChange={e => setForm({ ...form, saccoId: e.target.value })}
+                        disabled={!isCreate && !isEdit}
+                        placeholder="Select a sacco"
+                        readOnly={!isCreate && !isEdit}
+                      />
+                      {(isCreate || isEdit) && (
+                        <button
+                          type="button"
+                          className="role-search-btn"
+                          onClick={handleOpenSaccoModal}
+                          title="Search saccos"
+                        >
+                          <FiSearch />
+                        </button>
+                      )}
+                    </div>
+                  </label>
+
+                  <label>
                     Currency
+                    <div className="role-input-wrapper">
+                      <input
+                        type="text"
+                        className="input"
+                        value={form.currency}
+                        onChange={e => setForm({ ...form, currency: e.target.value })}
+                        disabled={!isCreate && !isEdit}
+                        required
+                        placeholder="Select a currency"
+                        readOnly={!isCreate && !isEdit}
+                      />
+                      {(isCreate || isEdit) && (
+                        <button
+                          type="button"
+                          className="role-search-btn"
+                          onClick={handleOpenCurrencyModal}
+                          title="Search currencies"
+                        >
+                          <FiSearch />
+                        </button>
+                      )}
+                    </div>
+                  </label>
+
+                  <label>
+                    Interest Rate (%)
                     <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
                       className="input"
-                      value={form.currency}
-                      onChange={e => setForm({ ...form, currency: e.target.value })}
+                      value={form.interestRate}
+                      onChange={e => setForm({ ...form, interestRate: e.target.value })}
                       disabled={!isCreate && !isEdit}
-                      required
+                      placeholder="e.g., 12.5"
                     />
                   </label>
 
-                  {/* Interest Configuration Fields */}
                   <label>
                     Interest Type
                     <select
@@ -292,6 +439,7 @@ function ProductForm() {
                       <option value="Variable Rate">Variable Rate</option>
                     </select>
                   </label>
+
                   <label>
                     Interest Calculation Rule
                     <select
@@ -324,6 +472,59 @@ function ProductForm() {
                       <option value="Annually">Annually</option>
                       <option value="At Maturity">At Maturity</option>
                     </select>
+                  </label>
+
+                  <label>
+                    Charge IDs
+                    <div className="role-input-wrapper">
+                      <input
+                        type="text"
+                        className="input"
+                        value={form.chargeIds}
+                        onChange={e => setForm({ ...form, chargeIds: e.target.value })}
+                        disabled={!isCreate && !isEdit}
+                        placeholder="Select charges"
+                        readOnly={!isCreate && !isEdit}
+                      />
+                      {(isCreate || isEdit) && (
+                        <button
+                          type="button"
+                          className="role-search-btn"
+                          onClick={handleOpenChargesModal}
+                          title="Search charges"
+                        >
+                          <FiSearch />
+                        </button>
+                      )}
+                    </div>
+                    {selectedCharges.length > 0 && (
+                      <div style={{ 
+                        marginTop: '8px', 
+                        display: 'flex', 
+                        flexWrap: 'wrap', 
+                        gap: '6px' 
+                      }}>
+                        {selectedCharges.map(charge => (
+                          <span
+                            key={charge.chargeId}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '4px 8px',
+                              backgroundColor: '#e0f2fe',
+                              color: '#0369a1',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              fontWeight: '500',
+                              border: '1px solid #0ea5e9'
+                            }}
+                          >
+                            {charge.chargeId} - {charge.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </label>
                 </div>
 
@@ -390,25 +591,122 @@ function ProductForm() {
                   </div>
                 </div>
 
-                {/* Member Onboarding Checkbox - Centered */}
+                {/* Guarantor Configuration */}
+                <div style={{ 
+                  marginBottom: "32px", 
+                  display: "flex", 
+                  justifyContent: "center", 
+                  alignItems: "center",
+                  flexDirection: "column",
+                  gap: "16px"
+                }}>
+                  <h4 style={{ marginBottom: "12px", color: "var(--primary-700)", textAlign: "center" }}>Guarantor Configuration</h4>
+                  <div style={{ display: "flex", gap: "24px", justifyContent: "center", alignItems: "center" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={form.needGuarantors}
+                        onChange={e => setForm({ ...form, needGuarantors: e.target.checked })}
+                        disabled={!isCreate && !isEdit}
+                        style={{ transform: "scale(1.2)" }}
+                      />
+                      <span>Need Guarantors</span>
+                    </label>
+                  </div>
+                  
+                  {form.needGuarantors && (
+                    <div style={{ display: "flex", gap: "16px", justifyContent: "center" }}>
+                      <label style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <span style={{ fontSize: "12px", color: "#666" }}>Min Guarantors</span>
+                        <input
+                          type="number"
+                          min="0"
+                          className="input"
+                          value={form.minGuarantors}
+                          onChange={e => setForm({ ...form, minGuarantors: e.target.value })}
+                          disabled={!isCreate && !isEdit}
+                          style={{ width: "100px" }}
+                        />
+                      </label>
+                      <label style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <span style={{ fontSize: "12px", color: "#666" }}>Max Guarantors</span>
+                        <input
+                          type="number"
+                          min="0"
+                          className="input"
+                          value={form.maxGuarantors}
+                          onChange={e => setForm({ ...form, maxGuarantors: e.target.value })}
+                          disabled={!isCreate && !isEdit}
+                          style={{ width: "100px" }}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                {/* Special Product Configuration */}
+                <div style={{ 
+                  marginBottom: "32px", 
+                  display: "flex", 
+                  justifyContent: "center", 
+                  alignItems: "center",
+                  flexDirection: "column",
+                  gap: "16px"
+                }}>
+                  <h4 style={{ marginBottom: "12px", color: "var(--primary-700)", textAlign: "center" }}>Special Product Configuration</h4>
+                  <div style={{ display: "flex", gap: "24px", justifyContent: "center", alignItems: "center" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={form.isSpecial}
+                        onChange={e => setForm({ ...form, isSpecial: e.target.checked })}
+                        disabled={!isCreate && !isEdit}
+                        style={{ transform: "scale(1.2)" }}
+                      />
+                      <span>Is Special Product</span>
+                    </label>
+                  </div>
+                  
+                  {form.isSpecial && (
+                    <div style={{ display: "flex", gap: "16px", justifyContent: "center" }}>
+                      <label style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <span style={{ fontSize: "12px", color: "#666" }}>Max Special Users</span>
+                        <input
+                          type="number"
+                          min="0"
+                          className="input"
+                          value={form.maxSpecialUsers}
+                          onChange={e => setForm({ ...form, maxSpecialUsers: e.target.value })}
+                          disabled={!isCreate && !isEdit}
+                          style={{ width: "120px" }}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                {/* Member Onboarding Configuration */}
                 <div style={{ 
                   marginBottom: "20px", 
                   display: "flex", 
                   justifyContent: "center", 
                   alignItems: "center",
-                  flexDirection: "column"
+                  flexDirection: "column",
+                  gap: "16px"
                 }}>
                   <h4 style={{ marginBottom: "12px", color: "var(--primary-700)", textAlign: "center" }}>Member Onboarding</h4>
-                  <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-                    <input
-                      type="checkbox"
-                      checked={form.appliedOnMemberOnboarding}
-                      onChange={e => setForm({ ...form, appliedOnMemberOnboarding: e.target.checked })}
-                      disabled={!isCreate && !isEdit}
-                      style={{ transform: "scale(1.2)" }}
-                    />
-                    <span>Applied on Member Onboarding</span>
-                  </label>
+                  <div style={{ display: "flex", gap: "24px", justifyContent: "center" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={form.appliedOnMemberOnboarding}
+                        onChange={e => setForm({ ...form, appliedOnMemberOnboarding: e.target.checked })}
+                        disabled={!isCreate && !isEdit}
+                        style={{ transform: "scale(1.2)" }}
+                      />
+                      <span>Applied on Member Onboarding</span>
+                    </label>
+                  </div>
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginTop: "24px" }}>
@@ -505,6 +803,28 @@ function ProductForm() {
           </form>
         </section>
       </main>
+
+      {/* Currency Lookup Modal */}
+      <CurrencyLookupModal
+        isOpen={isCurrencyModalOpen}
+        onClose={handleCloseCurrencyModal}
+        onSelectCurrency={handleSelectCurrency}
+      />
+
+      {/* Sacco Lookup Modal */}
+      <SaccoLookupModal
+        isOpen={isSaccoModalOpen}
+        onClose={handleCloseSaccoModal}
+        onSelectSacco={handleSelectSacco}
+      />
+
+      {/* Charges Lookup Modal */}
+      <ChargesLookupModal
+        isOpen={isChargesModalOpen}
+        onClose={handleCloseChargesModal}
+        onSelectCharges={handleSelectCharges}
+        selectedChargeIds={selectedCharges.map(charge => charge.chargeId)}
+      />
     </DashboardWrapper>
   );
 }

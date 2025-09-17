@@ -1,10 +1,11 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useHistory, useParams, useLocation } from "react-router-dom";
-import { FiArrowLeft } from "react-icons/fi";
+import { FiArrowLeft, FiSearch } from "react-icons/fi";
 import axios from "axios";
 import { useSnackbar } from "../helpers/SnackbarContext";
 import { AuthContext } from "../helpers/AuthContext";
 import DashboardWrapper from '../components/DashboardWrapper';
+import RoleLookupModal from '../components/RoleLookupModal';
 
 function UserForm() {
   const history = useHistory();
@@ -22,7 +23,7 @@ function UserForm() {
     firstName: "",
     lastName: "",
     phoneNumber: "",
-    role: "User",
+    role: "",
     status: "Pending Password",
     createdBy: "",
     createdOn: "",
@@ -35,13 +36,9 @@ function UserForm() {
     lockRemarks: "",
   });
 
-  const [roles] = useState([
-    "User",
-    "Admin",
-    "Manager",
-    "Supervisor",
-    "Clerk"
-  ]);
+
+  // Role lookup modal state
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
   useEffect(() => {
     // Only redirect if authentication check is complete and user is not authenticated
@@ -107,6 +104,20 @@ function UserForm() {
       const msg = err?.response?.data?.message || err?.response?.data?.error || "Failed to save user";
       showMessage(msg, "error");
     }
+  };
+
+  // Role lookup modal handlers
+  const handleOpenRoleModal = () => {
+    setIsRoleModalOpen(true);
+  };
+
+  const handleCloseRoleModal = () => {
+    setIsRoleModalOpen(false);
+  };
+
+  const handleSelectRole = (selectedRole) => {
+    setForm(prev => ({ ...prev, role: selectedRole.roleName }));
+    setIsRoleModalOpen(false);
   };
 
   const getStatusColor = (status) => {
@@ -225,19 +236,29 @@ function UserForm() {
               />
             </label>
             <label>Role
-              <select className="input" 
-                value={form.role} 
-                onChange={e => setForm({ ...form, role: e.target.value })} 
-                disabled={!isCreate && !isEdit} 
-              >
-                {roles.map((role) => (
-                  <option key={role} value={role}>
-                    {role}
-                  </option>
-                ))}
-              </select>
+              <div className="role-input-wrapper">
+                <input 
+                  type="text"
+                  className="input" 
+                  value={form.role} 
+                  onChange={e => setForm({ ...form, role: e.target.value })} 
+                  disabled={!isCreate && !isEdit}
+                  placeholder="Select a role"
+                  readOnly={!isCreate && !isEdit}
+                />
+                {(isCreate || isEdit) && (
+                  <button
+                    type="button"
+                    className="role-search-btn"
+                    onClick={handleOpenRoleModal}
+                    title="Search roles"
+                  >
+                    <FiSearch />
+                  </button>
+                )}
+              </div>
             </label>
-            {!isCreate && (
+            {/* {!isCreate && (
               <label>Status
                 <select className="input" 
                   value={form.status} 
@@ -251,7 +272,7 @@ function UserForm() {
                   <option value="Locked">Locked</option>
                 </select>
               </label>
-            )}
+            )} */}
           </div>
 
           {(isCreate || isEdit) && (
@@ -357,6 +378,13 @@ function UserForm() {
           </div>
         </form>
       </main>
+
+      {/* Role Lookup Modal */}
+      <RoleLookupModal
+        isOpen={isRoleModalOpen}
+        onClose={handleCloseRoleModal}
+        onSelectRole={handleSelectRole}
+      />
     </DashboardWrapper>
   );
 }

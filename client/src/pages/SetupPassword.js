@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useHistory, useLocation } from "react-router-dom";
 import axios from "axios";
 import { useSnackbar } from "../helpers/SnackbarContext";
@@ -17,6 +17,17 @@ function SetupPassword() {
   const [loading, setLoading] = useState(false);
   const [token, setToken] = useState("");
 
+  const verifyToken = useCallback(async (token) => {
+    try {
+      const res = await axios.get(`http://localhost:3001/users/verify-token/${token}`);
+      setUser(res.data.entity);
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Invalid or expired token";
+      showMessage(msg, "error");
+      history.push("/login");
+    }
+  }, [showMessage, history]);
+
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const tokenParam = urlParams.get('token');
@@ -29,18 +40,7 @@ function SetupPassword() {
     
     setToken(tokenParam);
     verifyToken(tokenParam);
-  }, [location.search, history, showMessage]);
-
-  const verifyToken = async (token) => {
-    try {
-      const res = await axios.get(`http://localhost:3001/users/verify-token/${token}`);
-      setUser(res.data.entity);
-    } catch (err) {
-      const msg = err?.response?.data?.error || "Invalid or expired token";
-      showMessage(msg, "error");
-      history.push("/login");
-    }
-  };
+  }, [location.search, history, showMessage, verifyToken]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -3,6 +3,7 @@ const router = express.Router();
 const { Users } = require("../models");
 const bcrypt = require("bcryptjs");
 const { validateToken } = require("../middlewares/AuthMiddleware");
+const { logViewOperation, logCreateOperation, logUpdateOperation, logDeleteOperation, logAuthEvent } = require("../middlewares/LoggingMiddleware");
 const { sign } = require("jsonwebtoken");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
@@ -78,7 +79,7 @@ const generateUserId = () => {
 };
 
 // Create new user (admin only)
-router.post("/", validateToken, async (req, res) => {
+router.post("/", validateToken, logCreateOperation("User"), async (req, res) => {
   try {
     const { username, email, firstName, lastName, phoneNumber, role } = req.body;
 
@@ -176,7 +177,7 @@ router.post("/", validateToken, async (req, res) => {
 });
 
 // Get all users (admin only)
-router.get("/", validateToken, async (req, res) => {
+router.get("/", validateToken, logViewOperation("User"), async (req, res) => {
   try {
     const { status, q } = req.query;
     let whereClause = {};
@@ -208,8 +209,37 @@ router.get("/", validateToken, async (req, res) => {
   }
 });
 
+// Authentication endpoint - must be before /:id route
+router.get("/auth", validateToken, logViewOperation("User"), async (req, res) => {
+  try {
+    // Verify the user still exists in the database
+    const user = await Users.findByPk(req.user.id, {
+      attributes: { exclude: ['password', 'passwordResetToken'] }
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: "User not found" });
+    }
+
+    // Return user info with additional fields
+    res.json({
+      id: user.id,
+      userId: user.userId,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      status: user.status
+    });
+  } catch (error) {
+    console.error("Auth error:", error);
+    res.status(500).json({ error: "Internal server error during authentication" });
+  }
+});
+
 // Get single user by ID
-router.get("/:id", validateToken, async (req, res) => {
+router.get("/:id", validateToken, logViewOperation("User"), async (req, res) => {
   try {
     const { id } = req.params;
     const user = await Users.findByPk(id, {
@@ -228,7 +258,7 @@ router.get("/:id", validateToken, async (req, res) => {
 });
 
 // Update user
-router.put("/:id", validateToken, async (req, res) => {
+router.put("/:id", validateToken, logUpdateOperation("User"), async (req, res) => {
   try {
     const { id } = req.params;
     const { username, email, firstName, lastName, phoneNumber, role, status } = req.body;
@@ -273,7 +303,7 @@ router.put("/:id", validateToken, async (req, res) => {
 });
 
 // Lock/Unlock user
-router.put("/:id/lock", validateToken, async (req, res) => {
+router.put("/:id/lock", validateToken, logUpdateOperation("User"), async (req, res) => {
   try {
     const { id } = req.params;
     const { lockRemarks } = req.body;
@@ -329,7 +359,7 @@ router.put("/:id/lock", validateToken, async (req, res) => {
 });
 
 // Approve user (maker-checker)
-router.put("/:id/approve", validateToken, async (req, res) => {
+router.put("/:id/approve", validateToken, logUpdateOperation("User"), async (req, res) => {
   try {
     const { id } = req.params;
     const { action } = req.body; // 'approve' or 'reject'
@@ -369,7 +399,7 @@ router.put("/:id/approve", validateToken, async (req, res) => {
 });
 
 // Setup password for new users
-router.post("/setup-password", async (req, res) => {
+router.post("/setup-password", logAuthEvent, async (req, res) => {
   try {
     const { token, password, confirmPassword } = req.body;
 
@@ -415,7 +445,7 @@ router.post("/setup-password", async (req, res) => {
 });
 
 // Resend password setup email
-router.post("/:id/resend-email", validateToken, async (req, res) => {
+router.post("/:id/resend-email", validateToken, logUpdateOperation("User"), async (req, res) => {
   try {
     const { id } = req.params;
     const user = await Users.findByPk(id);
@@ -497,7 +527,7 @@ router.post("/:id/resend-email", validateToken, async (req, res) => {
 });
 
 // Verify password setup token
-router.get("/verify-token/:token", async (req, res) => {
+router.get("/verify-token/:token", logViewOperation("User"), async (req, res) => {
   try {
     const { token } = req.params;
 
@@ -529,7 +559,7 @@ router.get("/verify-token/:token", async (req, res) => {
   }
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", logAuthEvent, async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -570,47 +600,37 @@ router.post("/login", async (req, res) => {
     }
 
     const accessToken = sign(
-      { username: user.username, id: user.id },
+      { username: user.username, id: user.id, role: user.role },
       "importantsecret",
       { expiresIn: "30d" } // Token expires in 30 days
     );
     
-    res.json({ token: accessToken, username: username, id: user.id });
+    res.json({ 
+      token: accessToken, 
+      username: username, 
+      id: user.id,
+      role: user.role,
+      saccoId: user.saccoId || 'SYSTEM'
+    });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ error: "Internal server error during login" });
   }
 });
 
-router.get("/auth", validateToken, async (req, res) => {
+// Logout route
+router.post("/logout", logAuthEvent, async (req, res) => {
   try {
-    // Verify the user still exists in the database
-    const user = await Users.findByPk(req.user.id, {
-      attributes: { exclude: ['password', 'passwordResetToken'] }
-    });
-
-    if (!user) {
-      return res.status(401).json({ error: "User not found" });
-    }
-
-    // Return user info with additional fields
-    res.json({
-      id: user.id,
-      userId: user.userId,
-      username: user.username,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
-      status: user.status
-    });
+    // For logout, we just need to log the event
+    // The actual token invalidation would be handled on the client side
+    res.json({ message: "Logged out successfully" });
   } catch (error) {
-    console.error("Auth error:", error);
-    res.status(500).json({ error: "Internal server error during authentication" });
+    console.error("Logout error:", error);
+    res.status(500).json({ error: "Internal server error during logout" });
   }
 });
 
-router.get("/basicinfo/:id", async (req, res) => {
+router.get("/basicinfo/:id", logViewOperation("User"), async (req, res) => {
   try {
     const id = req.params.id;
 
@@ -633,7 +653,7 @@ router.get("/basicinfo/:id", async (req, res) => {
   }
 });
 
-router.put("/changepassword", validateToken, async (req, res) => {
+router.put("/changepassword", validateToken, logUpdateOperation("User"), async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
 

@@ -1,6 +1,7 @@
 module.exports = (sequelize, DataTypes) => {
   const Members = sequelize.define("Members", {
     memberNo: { type: DataTypes.STRING, allowNull: false, unique: true },
+    saccoId: { type: DataTypes.STRING, allowNull: false },
     title: { type: DataTypes.STRING, allowNull: true },
     firstName: { type: DataTypes.STRING, allowNull: false },
     lastName: { type: DataTypes.STRING, allowNull: false },
@@ -34,6 +35,12 @@ module.exports = (sequelize, DataTypes) => {
 
   // Define associations
   Members.associate = (models) => {
+    // Member belongs to Sacco
+    Members.belongsTo(models.Sacco, {
+      foreignKey: 'saccoId',
+      as: 'sacco'
+    });
+
     // Member has many Accounts
     Members.hasMany(models.Accounts, {
       foreignKey: 'memberId',

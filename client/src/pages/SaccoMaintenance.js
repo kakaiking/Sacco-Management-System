@@ -4,6 +4,7 @@ import axios from "axios";
 import { FiEye, FiEdit3, FiTrash2, FiCheckCircle, FiXCircle } from "react-icons/fi";
 import { FaPlus } from 'react-icons/fa';
 import DashboardWrapper from '../components/DashboardWrapper';
+import Pagination from '../components/Pagination';
 import { useSnackbar } from "../helpers/SnackbarContext";
 import { AuthContext } from "../helpers/AuthContext";
 
@@ -27,6 +28,8 @@ function SaccoMaintenance() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusAction, setStatusAction] = useState("");
   const [verifierRemarks, setVerifierRemarks] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -57,10 +60,29 @@ function SaccoMaintenance() {
     return c;
   }, [saccos]);
 
+  // Pagination logic
+  const paginatedSaccos = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return saccos.slice(startIndex, endIndex);
+  }, [saccos, currentPage, itemsPerPage]);
+
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    setSelectedSaccos([]); // Clear selection when changing pages
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+    setSelectedSaccos([]); // Clear selection
+  };
+
   // Selection functions
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedSaccos(saccos.map(s => s.id));
+      setSelectedSaccos(paginatedSaccos.map(s => s.id));
     } else {
       setSelectedSaccos([]);
     }
@@ -74,8 +96,8 @@ function SaccoMaintenance() {
     }
   };
 
-  const isAllSelected = selectedSaccos.length === saccos.length && saccos.length > 0;
-  const isIndeterminate = selectedSaccos.length > 0 && selectedSaccos.length < saccos.length;
+  const isAllSelected = selectedSaccos.length === paginatedSaccos.length && paginatedSaccos.length > 0;
+  const isIndeterminate = selectedSaccos.length > 0 && selectedSaccos.length < paginatedSaccos.length;
 
   // Show/hide batch actions based on selection
   useEffect(() => {
@@ -262,7 +284,7 @@ function SaccoMaintenance() {
                 </tr>
               </thead>
               <tbody>
-                {saccos.map(s => (
+                {paginatedSaccos.map(s => (
                   <tr key={s.id}>
                     <td>
                       <input
@@ -330,6 +352,14 @@ function SaccoMaintenance() {
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalItems={saccos.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
         </section>
       </main>
 

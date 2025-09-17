@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { Accounts, Members, Products } = require("../models");
 const { validateToken } = require("../middlewares/AuthMiddleware");
+const { logViewOperation, logCreateOperation, logUpdateOperation, logDeleteOperation } = require("../middlewares/LoggingMiddleware");
 
 // Helper function to generate Account ID
 const generateAccountId = (productId, memberId) => {
@@ -58,7 +59,7 @@ router.get("/test", validateToken, async (req, res) => {
 });
 
 // Get all accounts
-router.get("/", validateToken, async (req, res) => {
+router.get("/", validateToken, logViewOperation("Account"), async (req, res) => {
   try {
     const { status, q } = req.query;
     
@@ -95,7 +96,7 @@ router.get("/", validateToken, async (req, res) => {
 });
 
 // Get accounts by member ID
-router.get("/member/:memberId", validateToken, async (req, res) => {
+router.get("/member/:memberId", validateToken, logViewOperation("Account"), async (req, res) => {
   try {
     const accounts = await Accounts.findAll({
       where: { 
@@ -115,7 +116,7 @@ router.get("/member/:memberId", validateToken, async (req, res) => {
 });
 
 // Get single account
-router.get("/:id", validateToken, async (req, res) => {
+router.get("/:id", validateToken, logViewOperation("Account"), async (req, res) => {
   try {
     const account = await Accounts.findByPk(req.params.id, {
       include: [
@@ -131,7 +132,7 @@ router.get("/:id", validateToken, async (req, res) => {
 });
 
 // Create new account
-router.post("/", validateToken, async (req, res) => {
+router.post("/", validateToken, logCreateOperation("Account"), async (req, res) => {
   try {
     const data = req.body || {};
     const username = req.user?.username || "System";
@@ -256,7 +257,7 @@ router.post("/", validateToken, async (req, res) => {
 });
 
 // Update account
-router.put("/:id", validateToken, async (req, res) => {
+router.put("/:id", validateToken, logUpdateOperation("Account"), async (req, res) => {
   try {
     const data = req.body || {};
     const username = req.user?.username || null;
@@ -305,7 +306,7 @@ router.put("/:id", validateToken, async (req, res) => {
 });
 
 // Soft delete account
-router.delete("/:id", validateToken, async (req, res) => {
+router.delete("/:id", validateToken, logDeleteOperation("Account"), async (req, res) => {
   try {
     const username = req.user?.username || null;
     const [count] = await Accounts.update(

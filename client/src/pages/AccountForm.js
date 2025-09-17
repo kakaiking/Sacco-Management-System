@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useHistory, useParams, useLocation } from "react-router-dom";
-import { FiArrowLeft, FiEdit3, FiTrash2, FiX } from "react-icons/fi";
+import { FiArrowLeft } from "react-icons/fi";
 import axios from "axios";
 import { useSnackbar } from "../helpers/SnackbarContext";
 import { AuthContext } from "../helpers/AuthContext";
@@ -110,7 +110,7 @@ function AccountForm() {
           remarks: form.remarks
         };
         
-        const res = await axios.post("http://localhost:3001/accounts", payload, {
+        await axios.post("http://localhost:3001/accounts", payload, {
           headers: { accessToken: localStorage.getItem("accessToken") },
         });
         showMessage("Account created successfully", "success");
@@ -135,20 +135,6 @@ function AccountForm() {
     }
   };
 
-  const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this account?")) {
-      try {
-        await axios.delete(`http://localhost:3001/accounts/${id}`, {
-          headers: { accessToken: localStorage.getItem("accessToken") },
-        });
-        showMessage("Account deleted successfully", "success");
-        history.push("/accounts-management");
-      } catch (err) {
-        const msg = err?.response?.data?.message || "Failed to delete account";
-        showMessage(msg, "error");
-      }
-    }
-  };
 
   return (
     <DashboardWrapper>

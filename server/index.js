@@ -9,15 +9,9 @@ app.use(cors());
 const db = require("./models");
 
 // Routers
-const postRouter = require("./routes/Posts");
-app.use("/posts", postRouter);
-const commentsRouter = require("./routes/Comments");
-app.use("/comments", commentsRouter);
 const usersRouter = require("./routes/Users");
 app.use("/users", usersRouter);
 app.use("/auth", usersRouter);
-const likesRouter = require("./routes/Likes");
-app.use("/likes", likesRouter);
 const membersRouter = require("./routes/Members");
 app.use("/members", membersRouter);
 const productsRouter = require("./routes/Products");
@@ -28,6 +22,14 @@ const saccoRouter = require("./routes/Sacco");
 app.use("/sacco", saccoRouter);
 const branchRouter = require("./routes/Branch");
 app.use("/branch", branchRouter);
+const rolesRouter = require("./routes/Roles");
+app.use("/roles", rolesRouter);
+const currencyRouter = require("./routes/Currency");
+app.use("/currencies", currencyRouter);
+const chargesRouter = require("./routes/Charges");
+app.use("/charges", chargesRouter);
+const logsRouter = require("./routes/Logs");
+app.use("/logs", logsRouter);
 
 db.sequelize.sync().then(() => {
   try {
@@ -37,7 +39,8 @@ db.sequelize.sync().then(() => {
   } catch (error) {
     //send back response of the error
     console.log(error);
-    res.status(500).json({ error: error.message }); 
   }
   
+}).catch((error) => {
+  console.error("Database sync failed:", error);
 });

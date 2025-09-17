@@ -4,6 +4,7 @@ import axios from "axios";
 import { FiEye, FiEdit3, FiTrash2, FiCheckCircle, FiClock, FiRotateCcw, FiXCircle } from "react-icons/fi";
 import { FaPlus } from 'react-icons/fa';
 import DashboardWrapper from '../components/DashboardWrapper';
+import Pagination from '../components/Pagination';
 import { useSnackbar } from "../helpers/SnackbarContext";
 import { AuthContext } from "../helpers/AuthContext";
 
@@ -27,40 +28,64 @@ function ProductMaintenance() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusAction, setStatusAction] = useState("");
   const [verifierRemarks, setVerifierRemarks] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const fetchProducts = async () => {
+    try {
+      const params = {};
+      if (statusFilter) params.status = statusFilter;
+      if (search) params.q = search;
+      const res = await axios.get("http://localhost:3001/products", {
+        headers: { accessToken: localStorage.getItem("accessToken") },
+        params,
+      });
+      const payload = res?.data?.entity ?? res?.data;
+      setProducts(Array.isArray(payload) ? payload : []);
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      showMessage("Failed to fetch products", "error");
+    }
+  };
 
   useEffect(() => {
     const controller = new AbortController();
-    const fetchProducts = async () => {
-      try {
-        const params = {};
-        if (statusFilter) params.status = statusFilter;
-        if (search) params.q = search;
-        const res = await axios.get("http://localhost:3001/products", {
-          headers: { accessToken: localStorage.getItem("accessToken") },
-          params,
-          signal: controller.signal,
-        });
-        const payload = res?.data?.entity ?? res?.data;
-        setProducts(Array.isArray(payload) ? payload : []);
-      } catch {}
-    };
     fetchProducts();
     return () => controller.abort();
   }, [statusFilter, search]);
 
   const counts = useMemo(() => {
     const list = Array.isArray(products) ? products : [];
-    const c = { Approved: 0, Pending: 0, Returned: 0, Rejected: 0 };
+    const c = { Approved: 0, Pending: 0, Returned: 0, Rejected: 0, Deleted: 0 };
     for (const p of list) {
       if (p.status && c[p.status] !== undefined) c[p.status] += 1;
     }
     return c;
   }, [products]);
 
+  // Pagination logic
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return products.slice(startIndex, endIndex);
+  }, [products, currentPage, itemsPerPage]);
+
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    setSelectedProducts([]); // Clear selection when changing pages
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+    setSelectedProducts([]); // Clear selection
+  };
+
   // Selection functions
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedProducts(products.map(p => p.id));
+      setSelectedProducts(paginatedProducts.map(p => p.id));
     } else {
       setSelectedProducts([]);
     }
@@ -74,8 +99,8 @@ function ProductMaintenance() {
     }
   };
 
-  const isAllSelected = selectedProducts.length === products.length && products.length > 0;
-  const isIndeterminate = selectedProducts.length > 0 && selectedProducts.length < products.length;
+  const isAllSelected = selectedProducts.length === paginatedProducts.length && paginatedProducts.length > 0;
+  const isIndeterminate = selectedProducts.length > 0 && selectedProducts.length < paginatedProducts.length;
 
   // Show/hide batch actions based on selection
   useEffect(() => {
@@ -164,6 +189,15 @@ function ProductMaintenance() {
               <div className="card__kpi">{counts.Rejected}</div>
             </div>
           </div>
+          <div className="card card--deleted">
+            <div className="card__icon">
+              {/* <FiTrash2 /> */}
+            </div>
+            <div className="card__content">
+              <h4>Deleted</h4>
+              <div className="card__kpi">{counts.Deleted}</div>
+            </div>
+          </div>
         </section>
 
         <section className="card" style={{ padding: 12 }}>
@@ -174,6 +208,7 @@ function ProductMaintenance() {
               <option value="Pending">Pending</option>
               <option value="Returned">Returned</option>
               <option value="Rejected">Rejected</option>
+              <option value="Deleted">Deleted</option>
             </select>
 
             <div className="searchWrapper">
@@ -297,7 +332,7 @@ function ProductMaintenance() {
                 </tr>
               </thead>
               <tbody>
-                {products.map(p => (
+                {paginatedProducts.map(p => (
                   <tr key={p.id}>
                     <td>
                       <input
@@ -325,18 +360,21 @@ function ProductMaintenance() {
                             p.status === "Pending" ? "rgba(6, 182, 212, 0.2)" :
                             p.status === "Returned" ? "rgba(249, 115, 22, 0.2)" :
                             p.status === "Rejected" ? "rgba(239, 68, 68, 0.2)" :
+                            p.status === "Deleted" ? "rgba(107, 114, 128, 0.2)" :
                             "rgba(107, 114, 128, 0.2)",
                           color: 
                             p.status === "Approved" ? "#059669" :
                             p.status === "Pending" ? "#0891b2" :
                             p.status === "Returned" ? "#ea580c" :
                             p.status === "Rejected" ? "#dc2626" :
+                            p.status === "Deleted" ? "#6b7280" :
                             "#6b7280",
                           border: `1px solid ${
                             p.status === "Approved" ? "rgba(16, 185, 129, 0.3)" :
                             p.status === "Pending" ? "rgba(6, 182, 212, 0.3)" :
                             p.status === "Returned" ? "rgba(249, 115, 22, 0.3)" :
                             p.status === "Rejected" ? "rgba(239, 68, 68, 0.3)" :
+                            p.status === "Deleted" ? "rgba(107, 114, 128, 0.3)" :
                             "rgba(107, 114, 128, 0.3)"
                           }`
                         }}
@@ -352,13 +390,26 @@ function ProductMaintenance() {
                         <FiEdit3 />
                       </button>
                       <button className="action-btn action-btn--delete" onClick={async () => {
-                        try {
-                          await axios.delete(`http://localhost:3001/products/${p.id}`, { headers: { accessToken: localStorage.getItem("accessToken") } });
-                          setProducts(curr => curr.filter(x => x.id !== p.id));
-                          showMessage("Product deleted successfully", "success");
-                        } catch (err) {
-                          const msg = err?.response?.data?.error || "Failed to delete product";
-                          showMessage(msg, "error");
+                        if (window.confirm("Are you sure you want to delete this product?")) {
+                          try {
+                            const response = await axios.delete(`http://localhost:3001/products/${p.id}`, { headers: { accessToken: localStorage.getItem("accessToken") } });
+                            
+                            console.log("Delete response:", response.data);
+                            
+                            // Only update local state if deletion was successful
+                            if (response.status === 200 && response.data.code === 200) {
+                              showMessage("Product deleted successfully", "success");
+                              // Refresh the products list to ensure consistency with backend
+                              await fetchProducts();
+                            } else {
+                              console.error("Delete failed:", response.data);
+                              showMessage("Failed to delete product", "error");
+                            }
+                          } catch (err) {
+                            const msg = err?.response?.data?.message || err?.response?.data?.error || "Failed to delete product";
+                            showMessage(msg, "error");
+                            console.error("Delete error:", err);
+                          }
                         }
                       }} title="Delete">
                         <FiTrash2 />
@@ -369,6 +420,14 @@ function ProductMaintenance() {
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalItems={products.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
         </section>
       </main>
 

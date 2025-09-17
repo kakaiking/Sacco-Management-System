@@ -4,6 +4,7 @@ import axios from "axios";
 import { FiEye, FiEdit3, FiTrash2, FiCheckCircle, FiClock, FiRotateCcw, FiXCircle } from "react-icons/fi";
 import { FaPlus } from 'react-icons/fa';
 import DashboardWrapper from '../components/DashboardWrapper';
+import Pagination from '../components/Pagination';
 import { useSnackbar } from "../helpers/SnackbarContext";
 import { AuthContext } from "../helpers/AuthContext";
 
@@ -27,6 +28,8 @@ function AccountsManagement() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusAction, setStatusAction] = useState("");
   const [verifierRemarks, setVerifierRemarks] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -55,14 +58,28 @@ function AccountsManagement() {
     }, {});
   }, [accounts]);
 
-  const filteredAccounts = useMemo(() => {
-    // Since we're now filtering on the server side, we just return the accounts
-    // The server handles both status and search filtering
-    return accounts;
-  }, [accounts]);
+  // Pagination logic
+  const paginatedAccounts = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return accounts.slice(startIndex, endIndex);
+  }, [accounts, currentPage, itemsPerPage]);
 
-  const isAllSelected = selectedAccounts.length === filteredAccounts.length && filteredAccounts.length > 0;
-  const isIndeterminate = selectedAccounts.length > 0 && selectedAccounts.length < filteredAccounts.length;
+
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    setSelectedAccounts([]); // Clear selection when changing pages
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+    setSelectedAccounts([]); // Clear selection
+  };
+
+  const isAllSelected = selectedAccounts.length === paginatedAccounts.length && paginatedAccounts.length > 0;
+  const isIndeterminate = selectedAccounts.length > 0 && selectedAccounts.length < paginatedAccounts.length;
 
   const handleSelectAccount = (accountId, checked) => {
     if (checked) {
@@ -74,7 +91,7 @@ function AccountsManagement() {
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedAccounts(filteredAccounts.map(account => account.id));
+      setSelectedAccounts(paginatedAccounts.map(account => account.id));
     } else {
       setSelectedAccounts([]);
     }
@@ -99,25 +116,6 @@ function AccountsManagement() {
     }
   };
 
-  const handleBatchDelete = async () => {
-    if (window.confirm(`Are you sure you want to delete ${selectedAccounts.length} account(s)?`)) {
-      try {
-        await Promise.all(
-          selectedAccounts.map(accountId =>
-            axios.delete(`http://localhost:3001/accounts/${accountId}`, {
-              headers: { accessToken: localStorage.getItem("accessToken") },
-            })
-          )
-        );
-        showMessage(`${selectedAccounts.length} account(s) deleted successfully`, "success");
-        setAccounts(prev => prev.filter(account => !selectedAccounts.includes(account.id)));
-        setSelectedAccounts([]);
-      } catch (err) {
-        const msg = err?.response?.data?.error || "Failed to delete accounts";
-        showMessage(msg, "error");
-      }
-    }
-  };
 
   // Status change functions
   const handleStatusChange = (action) => {
@@ -354,7 +352,7 @@ function AccountsManagement() {
                 </tr>
               </thead>
               <tbody>
-                {filteredAccounts.map(account => (
+                {paginatedAccounts.map(account => (
                   <tr key={account.id}>
                     <td>
                       <input
@@ -434,6 +432,14 @@ function AccountsManagement() {
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalItems={accounts.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
         </section>
       </main>
 

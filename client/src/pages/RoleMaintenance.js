@@ -1,8 +1,10 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useHistory } from "react-router-dom";
-import { FiEye, FiEdit3, FiTrash2, FiCheckCircle, FiClock, FiRotateCcw, FiXCircle } from "react-icons/fi";
+import axios from "axios";
+import { FiEye, FiEdit3, FiTrash2, FiCheckCircle, FiClock, FiRotateCcw } from "react-icons/fi";
 import { FaPlus } from 'react-icons/fa';
 import DashboardWrapper from '../components/DashboardWrapper';
+import Pagination from '../components/Pagination';
 import { useSnackbar } from "../helpers/SnackbarContext";
 import { AuthContext } from "../helpers/AuthContext";
 
@@ -18,43 +20,43 @@ function RoleMaintenance() {
     }
   }, [authState, isLoading, history]);
 
-  // Mock data for roles
-  const [roles, setRoles] = useState([
-    {
-      id: 1,
-      roleId: "ADMIN001",
-      roleName: "System Administrator",
-      description: "Full system access with all permissions",
-      permissions: ["Create", "Read", "Update", "Delete", "Manage Users", "System Config"],
-      status: "Active",
-      createdAt: "2024-01-15",
-      updatedAt: "2024-01-20"
-    },
-    {
-      id: 2,
-      roleId: "USER002",
-      roleName: "Regular User",
-      description: "Standard user with limited permissions",
-      permissions: ["Read", "Update Own Profile"],
-      status: "Active",
-      createdAt: "2024-01-10",
-      updatedAt: "2024-01-18"
-    },
-    {
-      id: 3,
-      roleId: "MANAGER003",
-      roleName: "Department Manager",
-      description: "Manager role with department-level permissions",
-      permissions: ["Create", "Read", "Update", "Manage Department", "View Reports"],
-      status: "Inactive",
-      createdAt: "2024-01-05",
-      updatedAt: "2024-01-25"
-    }
-  ]);
+  const [roles, setRoles] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [showBatchActions, setShowBatchActions] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Fetch roles from API
+  useEffect(() => {
+    const controller = new AbortController();
+    const fetchRoles = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get("http://localhost:3001/roles", {
+          headers: { accessToken: localStorage.getItem("accessToken") },
+          signal: controller.signal
+        });
+        setRoles(response.data.entity || []);
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error("Error fetching roles:", error);
+          showMessage("Failed to fetch roles", "error");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (authState.status) {
+      fetchRoles();
+    }
+
+    return () => controller.abort();
+  }, [authState.status, showMessage]);
 
   const counts = useMemo(() => {
     const list = Array.isArray(roles) ? roles : [];
@@ -66,17 +68,47 @@ function RoleMaintenance() {
   }, [roles]);
 
   const filteredRoles = useMemo(() => {
-    if (!search) return roles;
-    return roles.filter(role =>
-      role.roleId?.toLowerCase().includes(search.toLowerCase()) ||
-      role.roleName?.toLowerCase().includes(search.toLowerCase()) ||
-      role.description?.toLowerCase().includes(search.toLowerCase()) ||
-      role.status?.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [roles, search]);
+    let filtered = Array.isArray(roles) ? roles : [];
+    
+    // Filter by status
+    if (statusFilter) {
+      filtered = filtered.filter(role => role.status === statusFilter);
+    }
+    
+    // Filter by search
+    if (search) {
+      filtered = filtered.filter(role =>
+        role.roleId?.toLowerCase().includes(search.toLowerCase()) ||
+        role.roleName?.toLowerCase().includes(search.toLowerCase()) ||
+        role.description?.toLowerCase().includes(search.toLowerCase()) ||
+        role.status?.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    
+    return filtered;
+  }, [roles, search, statusFilter]);
 
-  const isAllSelected = selectedRoles.length === filteredRoles.length && filteredRoles.length > 0;
-  const isIndeterminate = selectedRoles.length > 0 && selectedRoles.length < filteredRoles.length;
+  // Pagination logic
+  const paginatedRoles = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredRoles.slice(startIndex, endIndex);
+  }, [filteredRoles, currentPage, itemsPerPage]);
+
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    setSelectedRoles([]); // Clear selection when changing pages
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+    setSelectedRoles([]); // Clear selection
+  };
+
+  const isAllSelected = selectedRoles.length === paginatedRoles.length && paginatedRoles.length > 0;
+  const isIndeterminate = selectedRoles.length > 0 && selectedRoles.length < paginatedRoles.length;
 
   const handleSelectRole = (roleId, checked) => {
     if (checked) {
@@ -88,7 +120,7 @@ function RoleMaintenance() {
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedRoles(filteredRoles.map(role => role.id));
+      setSelectedRoles(paginatedRoles.map(role => role.id));
     } else {
       setSelectedRoles([]);
     }
@@ -101,9 +133,13 @@ function RoleMaintenance() {
   const handleDelete = async (roleId) => {
     if (window.confirm("Are you sure you want to delete this role?")) {
       try {
+        await axios.delete(`http://localhost:3001/roles/${roleId}`, {
+          headers: { accessToken: localStorage.getItem("accessToken") }
+        });
         setRoles(prev => prev.filter(role => role.id !== roleId));
         showMessage("Role deleted successfully", "success");
       } catch (err) {
+        console.error("Error deleting role:", err);
         showMessage("Failed to delete role", "error");
       }
     }
@@ -112,10 +148,17 @@ function RoleMaintenance() {
   const handleBatchDelete = async () => {
     if (window.confirm(`Are you sure you want to delete ${selectedRoles.length} role(s)?`)) {
       try {
+        // Delete each role individually
+        for (const roleId of selectedRoles) {
+          await axios.delete(`http://localhost:3001/roles/${roleId}`, {
+            headers: { accessToken: localStorage.getItem("accessToken") }
+          });
+        }
         setRoles(prev => prev.filter(role => !selectedRoles.includes(role.id)));
         showMessage(`${selectedRoles.length} role(s) deleted successfully`, "success");
         setSelectedRoles([]);
       } catch (err) {
+        console.error("Error deleting roles:", err);
         showMessage("Failed to delete roles", "error");
       }
     }
@@ -162,96 +205,107 @@ function RoleMaintenance() {
 
         <section className="card" style={{ padding: 12 }}>
           <div className="tableToolbar">
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
-              <input
-                type="text"
-                placeholder="Search roles..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{
-                  padding: "8px 12px",
-                  border: "1px solid var(--border)",
-                  borderRadius: "6px",
-                  fontSize: "14px",
-                  minWidth: "200px"
-                }}
-              />
+            <select className="statusSelect" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="">All Statuses</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+
+            <div className="searchWrapper">
+              <input className="searchInput" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search roles..." />
+              <span className="searchIcon">🔍</span>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              {showBatchActions && (
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "14px", color: "var(--muted-text)" }}>
-                    {selectedRoles.length} selected
-                  </span>
-                  <button
-                    className="pill"
-                    onClick={handleBatchDelete}
-                    style={{
-                      backgroundColor: "#ef4444",
-                      color: "white",
-                      border: "none",
-                      padding: "6px 12px",
-                      borderRadius: "8px",
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      cursor: "pointer"
-                    }}
-                  >
-                    Delete Selected
-                  </button>
-                </div>
-              )}
+            <button 
+              className="pill" 
+              onClick={() => history.push("/role-form/new")}
+              style={{
+                backgroundColor: "var(--primary-500)",
+                color: "white",
+                border: "none",
+                padding: "8px 16px",
+                borderRadius: "12px",
+                fontSize: "16px",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                boxShadow: "0 2px 8px rgba(63, 115, 179, 0.2)"
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = "var(--primary-600)";
+                e.target.style.transform = "translateY(-2px)";
+                e.target.style.boxShadow = "0 4px 12px rgba(63, 115, 179, 0.3)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = "var(--primary-500)";
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "0 2px 8px rgba(63, 115, 179, 0.2)";
+              }}
+              title="Add Role"
+            >
+              <FaPlus />
+              Add Role
+            </button>
 
-              <button
-                className="pill"
-                onClick={() => history.push("/role-form/new")}
-                style={{
-                  backgroundColor: "var(--primary-500)",
-                  color: "white",
-                  border: "none",
-                  padding: "8px 16px",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px"
-                }}
-              >
-                <FaPlus size={14} />
-                Add Role
-              </button>
-            </div>
+            {/* Batch Action Buttons */}
+            {showBatchActions && (
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <span style={{ fontSize: "14px", color: "var(--muted-text)", marginRight: "8px" }}>
+                  {selectedRoles.length} selected
+                </span>
+                <button 
+                  className="pill" 
+                  onClick={handleBatchDelete}
+                  style={{
+                    backgroundColor: "#ef4444",
+                    color: "white",
+                    border: "none",
+                    padding: "6px 12px",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    cursor: "pointer"
+                  }}
+                >
+                  Delete Selected
+                </button>
+              </div>
+            )}
+
           </div>
 
           <div className="tableContainer">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      checked={isAllSelected}
-                      ref={input => {
-                        if (input) input.indeterminate = isIndeterminate;
-                      }}
-                      onChange={(e) => handleSelectAll(e.target.checked)}
-                      style={{ cursor: "pointer" }}
-                    />
-                  </th>
-                  <th>Role ID</th>
-                  <th>Role Name</th>
-                  <th>Description</th>
-                  <th>Permissions</th>
-                  <th>Status</th>
-                  <th>Created</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRoles.map(role => (
+            {loading ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "var(--text-secondary)" }}>
+                Loading roles...
+              </div>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        ref={input => {
+                          if (input) input.indeterminate = isIndeterminate;
+                        }}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                        style={{ cursor: "pointer" }}
+                      />
+                    </th>
+                    <th>Role ID</th>
+                    <th>Role Name</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th className="actions-column">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedRoles.map(role => (
                   <tr key={role.id}>
                     <td>
                       <input
@@ -264,39 +318,6 @@ function RoleMaintenance() {
                     <td>{role.roleId}</td>
                     <td>{role.roleName}</td>
                     <td>{role.description}</td>
-                    <td>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                        {role.permissions.slice(0, 3).map((permission, index) => (
-                          <span
-                            key={index}
-                            style={{
-                              backgroundColor: "rgba(99, 102, 241, 0.1)",
-                              color: "#6366f1",
-                              padding: "2px 6px",
-                              borderRadius: "4px",
-                              fontSize: "11px",
-                              fontWeight: "500"
-                            }}
-                          >
-                            {permission}
-                          </span>
-                        ))}
-                        {role.permissions.length > 3 && (
-                          <span
-                            style={{
-                              backgroundColor: "rgba(107, 114, 128, 0.1)",
-                              color: "#6b7280",
-                              padding: "2px 6px",
-                              borderRadius: "4px",
-                              fontSize: "11px",
-                              fontWeight: "500"
-                            }}
-                          >
-                            +{role.permissions.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    </td>
                     <td>
                       <div 
                         style={{
@@ -322,37 +343,45 @@ function RoleMaintenance() {
                         {role.status}
                       </div>
                     </td>
-                    <td>{role.createdAt}</td>
-                    <td>
+                    <td className="actions-column">
                       <div className="actions">
                         <button
-                          className="link"
+                          className="action-btn action-btn--view"
                           onClick={() => history.push(`/role-form/${role.id}`)}
                           title="View"
                         >
-                          <FiEye className="icon icon--view" />
+                          <FiEye />
                         </button>
                         <button
-                          className="link"
+                          className="action-btn action-btn--edit"
                           onClick={() => history.push(`/role-form/${role.id}?edit=1`)}
                           title="Edit"
                         >
-                          <FiEdit3 className="icon icon--edit" />
+                          <FiEdit3 />
                         </button>
                         <button
-                          className="link link--danger"
+                          className="action-btn action-btn--delete"
                           onClick={() => handleDelete(role.id)}
                           title="Delete"
                         >
-                          <FiTrash2 className="icon icon--delete" />
+                          <FiTrash2 />
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredRoles.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
         </section>
       </main>
     </DashboardWrapper>

@@ -2,19 +2,23 @@ const express = require("express");
 const router = express.Router();
 const { Products } = require("../models");
 const { validateToken } = require("../middlewares/AuthMiddleware");
+const { logViewOperation, logCreateOperation, logUpdateOperation, logDeleteOperation } = require("../middlewares/LoggingMiddleware");
+const { Op } = require("sequelize");
 
 const respond = (res, code, message, entity) => {
   res.status(code).json({ code, message, entity });
 };
 
 // List with optional status filter and search
-router.get("/", validateToken, async (req, res) => {
+router.get("/", validateToken, logViewOperation("Product"), async (req, res) => {
   try {
     const { status, q } = req.query;
-    const where = { isDeleted: 0 };
+    const where = { 
+      isDeleted: 0,
+      status: { [Op.ne]: "Deleted" } // Exclude deleted products
+    };
     if (status) where.status = status;
     if (q) {
-      const { Op } = require("sequelize");
       where[Op.or] = [
         { productId: { [Op.like]: `%${q}%` } },
         { productName: { [Op.like]: `%${q}%` } },
@@ -29,10 +33,10 @@ router.get("/", validateToken, async (req, res) => {
 });
 
 // Get one
-router.get("/:id", validateToken, async (req, res) => {
+router.get("/:id", validateToken, logViewOperation("Product"), async (req, res) => {
   try {
     const product = await Products.findByPk(req.params.id);
-    if (!product || product.isDeleted) return respond(res, 404, "Not found");
+    if (!product || product.isDeleted || product.status === "Deleted") return respond(res, 404, "Not found");
     respond(res, 200, "Product fetched", product);
   } catch (err) {
     respond(res, 500, err.message);
@@ -40,24 +44,33 @@ router.get("/:id", validateToken, async (req, res) => {
 });
 
 // Create
-router.post("/", validateToken, async (req, res) => {
+router.post("/", validateToken, logCreateOperation("Product"), async (req, res) => {
   try {
     const data = req.body || {};
     const username = req.user?.username || null;
     const payload = {
       productId: data.productId,
       productName: data.productName,
-      productStatus: data.productStatus || "Pending",
+      saccoId: data.saccoId || null,
+      chargeIds: data.chargeIds || null,
       currency: data.currency,
-      isCreditInterest: data.isCreditInterest || false,
-      isDebitInterest: data.isDebitInterest || false,
+      interestRate: data.interestRate || null,
       interestType: data.interestType || null,
       interestCalculationRule: data.interestCalculationRule || null,
       interestFrequency: data.interestFrequency || null,
+      isCreditInterest: data.isCreditInterest || false,
+      isDebitInterest: data.isDebitInterest || false,
+      needGuarantors: data.needGuarantors || false,
+      maxGuarantors: data.maxGuarantors || null,
+      minGuarantors: data.minGuarantors || null,
+      isSpecial: data.isSpecial || false,
+      maxSpecialUsers: data.maxSpecialUsers || null,
+      onMemberOnboarding: data.onMemberOnboarding || false,
       appliedOnMemberOnboarding: data.appliedOnMemberOnboarding || false,
+      productStatus: data.productStatus || "Pending",
+      status: "Pending",
       createdOn: new Date(),
       createdBy: username,
-      status: "Pending",
     };
     const created = await Products.create(payload);
     respond(res, 201, "Product created", created);
@@ -67,27 +80,42 @@ router.post("/", validateToken, async (req, res) => {
 });
 
 // Update
-router.put("/:id", validateToken, async (req, res) => {
+router.put("/:id", validateToken, logUpdateOperation("Product"), async (req, res) => {
   try {
     const data = req.body || {};
     const username = req.user?.username || null;
     const updatePayload = {
       productId: data.productId,
       productName: data.productName,
-      productStatus: data.productStatus || undefined,
+      saccoId: data.saccoId || null,
+      chargeIds: data.chargeIds || null,
       currency: data.currency,
-      isCreditInterest: data.isCreditInterest || false,
-      isDebitInterest: data.isDebitInterest || false,
+      interestRate: data.interestRate || null,
       interestType: data.interestType || null,
       interestCalculationRule: data.interestCalculationRule || null,
       interestFrequency: data.interestFrequency || null,
+      isCreditInterest: data.isCreditInterest || false,
+      isDebitInterest: data.isDebitInterest || false,
+      needGuarantors: data.needGuarantors || false,
+      maxGuarantors: data.maxGuarantors || null,
+      minGuarantors: data.minGuarantors || null,
+      isSpecial: data.isSpecial || false,
+      maxSpecialUsers: data.maxSpecialUsers || null,
+      onMemberOnboarding: data.onMemberOnboarding || false,
       appliedOnMemberOnboarding: data.appliedOnMemberOnboarding || false,
+      productStatus: data.productStatus || undefined,
       verifierRemarks: data.verifierRemarks || null,
       status: data.status || undefined,
       modifiedOn: new Date(),
       modifiedBy: username,
     };
-    const [count] = await Products.update(updatePayload, { where: { id: req.params.id, isDeleted: 0 } });
+    const [count] = await Products.update(updatePayload, { 
+      where: { 
+        id: req.params.id, 
+        isDeleted: 0,
+        status: { [Op.ne]: "Deleted" }
+      } 
+    });
     if (!count) return respond(res, 404, "Not found");
     const updated = await Products.findByPk(req.params.id);
     respond(res, 200, "Product updated", updated);
@@ -97,9 +125,14 @@ router.put("/:id", validateToken, async (req, res) => {
 });
 
 // Soft delete
-router.delete("/:id", validateToken, async (req, res) => {
+router.delete("/:id", validateToken, logDeleteOperation("Product"), async (req, res) => {
   try {
-    const [count] = await Products.update({ isDeleted: 1 }, { where: { id: req.params.id } });
+    const [count] = await Products.update({ 
+      isDeleted: 1, 
+      status: "Deleted",
+      modifiedOn: new Date(),
+      modifiedBy: req.user?.username || "System"
+    }, { where: { id: req.params.id } });
     if (!count) return respond(res, 404, "Not found");
     respond(res, 200, "Product deleted");
   } catch (err) {

@@ -436,7 +436,7 @@ function MemberForm() {
               {photo instanceof File ? (
                 <img
                   src={URL.createObjectURL(photo)}
-                  alt="Member Photo"
+                  alt="Member"
                   style={{
                     width: "100%",
                     height: "100%",
@@ -447,7 +447,7 @@ function MemberForm() {
               ) : photo && photo.isBase64 ? (
                 <img
                   src={photo.data}
-                  alt="Member Photo"
+                  alt="Member"
                   style={{
                     width: "100%",
                     height: "100%",
@@ -1507,7 +1507,7 @@ function MemberForm() {
             </button>
             <img
               src={photo instanceof File ? URL.createObjectURL(photo) : photo.data}
-              alt="Selected photo"
+              alt="Selected"
               style={{
                 width: "90%",
                 height: "90%",

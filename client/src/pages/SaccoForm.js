@@ -22,7 +22,6 @@ function SaccoForm() {
     address: "",
     contactPhone: "",
     contactEmail: "",
-    logs: "",
     status: "Active",
     createdBy: "",
     createdOn: "",
@@ -59,7 +58,6 @@ function SaccoForm() {
           address: data.address || "",
           contactPhone: data.contactPhone || "",
           contactEmail: data.contactEmail || "",
-          logs: data.logs || "",
           status: data.status || "Active",
           createdBy: data.createdBy || "",
           createdOn: data.createdOn || "",
@@ -213,15 +211,6 @@ function SaccoForm() {
             />
           </label>
 
-          <label>Logs
-            <textarea className="input" 
-              value={form.logs} 
-              onChange={e => setForm({ ...form, logs: e.target.value })} 
-              rows="4"
-              disabled={true} 
-              placeholder="System logs will be automatically generated..."
-            />
-          </label>
 
           {(isCreate || isEdit) && (
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "24px" }}>

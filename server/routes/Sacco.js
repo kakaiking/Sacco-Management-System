@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { Sacco } = require("../models");
 const { validateToken } = require("../middlewares/AuthMiddleware");
+const { logViewOperation, logCreateOperation, logUpdateOperation, logDeleteOperation } = require("../middlewares/LoggingMiddleware");
 
 const respond = (res, code, message, entity = null) => {
   res.status(code).json({ code, message, entity });
@@ -38,7 +39,7 @@ const handleError = (res, err, defaultMessage = "An error occurred") => {
 };
 
 // List with optional status filter and search
-router.get("/", validateToken, async (req, res) => {
+router.get("/", validateToken, logViewOperation("Sacco"), async (req, res) => {
   try {
     const { status, q } = req.query;
     const where = { isDeleted: 0 };
@@ -67,7 +68,7 @@ router.get("/", validateToken, async (req, res) => {
 });
 
 // Get one
-router.get("/:id", validateToken, async (req, res) => {
+router.get("/:id", validateToken, logViewOperation("Sacco"), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -88,7 +89,7 @@ router.get("/:id", validateToken, async (req, res) => {
 });
 
 // Create
-router.post("/", validateToken, async (req, res) => {
+router.post("/", validateToken, logCreateOperation("Sacco"), async (req, res) => {
   try {
     const data = req.body || {};
     const username = req.user?.username || null;
@@ -129,7 +130,7 @@ router.post("/", validateToken, async (req, res) => {
 });
 
 // Update
-router.put("/:id", validateToken, async (req, res) => {
+router.put("/:id", validateToken, logUpdateOperation("Sacco"), async (req, res) => {
   try {
     const { id } = req.params;
     const data = req.body || {};
@@ -206,7 +207,7 @@ router.put("/:id", validateToken, async (req, res) => {
 });
 
 // Bulk status update
-router.put("/bulk/status", validateToken, async (req, res) => {
+router.put("/bulk/status", validateToken, logUpdateOperation("Sacco"), async (req, res) => {
   try {
     const { ids, status, verifierRemarks } = req.body;
     const username = req.user?.username || null;
@@ -259,7 +260,7 @@ router.put("/bulk/status", validateToken, async (req, res) => {
 });
 
 // Soft delete
-router.delete("/:id", validateToken, async (req, res) => {
+router.delete("/:id", validateToken, logDeleteOperation("Sacco"), async (req, res) => {
   try {
     const { id } = req.params;
     

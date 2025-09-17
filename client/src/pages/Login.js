@@ -1,8 +1,10 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useRef, useEffect } from "react";
 import axios from "axios";
 import { useHistory } from "react-router-dom";
 import { AuthContext } from "../helpers/AuthContext";
 import { useSnackbar } from "../helpers/SnackbarContext";
+import { getUserPermissions } from "../helpers/PermissionUtils";
+import { fetchRolePermissions } from "../services/roleService";
 
 function Login() {
   const [username, setUsername] = useState("");
@@ -11,8 +13,16 @@ function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const { setAuthState } = useContext(AuthContext);
   const { showMessage } = useSnackbar();
+  const isMountedRef = useRef(true);
 
   let history = useHistory();
+
+  // Cleanup function to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const login = async () => {
     if (!username || !password) {
@@ -30,9 +40,16 @@ function Login() {
         showMessage(response.data.error, "error");
       } else {
         localStorage.setItem("accessToken", response.data.token);
+        
+        // Fetch role permissions
+        const rolePermissions = await fetchRolePermissions(response.data.role || "User");
+        const userPermissions = getUserPermissions(response.data.role || "User", rolePermissions);
+        
         setAuthState({
           username: response.data.username,
           id: response.data.id,
+          role: response.data.role || "User",
+          permissions: userPermissions,
           status: true,
         });
         showMessage(`Welcome back, ${response.data.username}!`, "success");
@@ -42,7 +59,10 @@ function Login() {
       const errorMessage = error?.response?.data?.error || "Login failed. Please try again.";
       showMessage(errorMessage, "error");
     } finally {
-      setIsLoading(false);
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
   return (

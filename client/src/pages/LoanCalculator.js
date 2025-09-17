@@ -46,9 +46,6 @@ function LoanCalculator() {
       return;
     }
 
-    // Calculate payment frequency multiplier
-    const frequencyMultiplier = loanData.paymentFrequency === "weekly" ? 52 : 
-                               loanData.paymentFrequency === "bi-weekly" ? 26 : 12;
     
     const monthlyRate = annualRate / 12;
     const totalPayments = termMonths;

@@ -4,6 +4,7 @@ import axios from "axios";
 import { FiEye, FiEdit3, FiTrash2, FiCheckCircle, FiXCircle } from "react-icons/fi";
 import { FaPlus } from 'react-icons/fa';
 import DashboardWrapper from '../components/DashboardWrapper';
+import Pagination from '../components/Pagination';
 import { useSnackbar } from "../helpers/SnackbarContext";
 import { AuthContext } from "../helpers/AuthContext";
 
@@ -27,6 +28,8 @@ function BranchMaintenance() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusAction, setStatusAction] = useState("");
   const [verifierRemarks, setVerifierRemarks] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -57,10 +60,29 @@ function BranchMaintenance() {
     return c;
   }, [branches]);
 
+  // Pagination logic
+  const paginatedBranches = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return branches.slice(startIndex, endIndex);
+  }, [branches, currentPage, itemsPerPage]);
+
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    setSelectedBranches([]); // Clear selection when changing pages
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+    setSelectedBranches([]); // Clear selection
+  };
+
   // Selection functions
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedBranches(branches.map(b => b.id));
+      setSelectedBranches(paginatedBranches.map(b => b.id));
     } else {
       setSelectedBranches([]);
     }
@@ -74,8 +96,8 @@ function BranchMaintenance() {
     }
   };
 
-  const isAllSelected = selectedBranches.length === branches.length && branches.length > 0;
-  const isIndeterminate = selectedBranches.length > 0 && selectedBranches.length < branches.length;
+  const isAllSelected = selectedBranches.length === paginatedBranches.length && paginatedBranches.length > 0;
+  const isIndeterminate = selectedBranches.length > 0 && selectedBranches.length < paginatedBranches.length;
 
   // Show/hide batch actions based on selection
   useEffect(() => {
@@ -261,7 +283,7 @@ function BranchMaintenance() {
                 </tr>
               </thead>
               <tbody>
-                {branches.map(b => (
+                {paginatedBranches.map(b => (
                   <tr key={b.id}>
                     <td>
                       <input
@@ -328,6 +350,14 @@ function BranchMaintenance() {
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalItems={branches.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
         </section>
       </main>
 
