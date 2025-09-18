@@ -30,6 +30,8 @@ const chargesRouter = require("./routes/Charges");
 app.use("/charges", chargesRouter);
 const logsRouter = require("./routes/Logs");
 app.use("/logs", logsRouter);
+const transactionsRouter = require("./routes/Transactions");
+app.use("/transactions", transactionsRouter);
 
 db.sequelize.sync().then(() => {
   try {

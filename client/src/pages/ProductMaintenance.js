@@ -327,6 +327,8 @@ function ProductMaintenance() {
                   <th>Product Id</th>
                   <th>Product Name</th>
                   <th>Currency</th>
+                  <th>Type</th>
+                  <th>Withdrawable</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -345,6 +347,42 @@ function ProductMaintenance() {
                     <td>{p.productId}</td>
                     <td>{p.productName}</td>
                     <td>{p.currency}</td>
+                    <td>
+                      <div 
+                        style={{
+                          display: "inline-block",
+                          padding: "4px 8px",
+                          borderRadius: "12px",
+                          fontSize: "11px",
+                          fontWeight: "600",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px",
+                          backgroundColor: p.productType === "BOSA" ? "rgba(59, 130, 246, 0.2)" : "rgba(16, 185, 129, 0.2)",
+                          color: p.productType === "BOSA" ? "#1d4ed8" : "#059669",
+                          border: `1px solid ${p.productType === "BOSA" ? "rgba(59, 130, 246, 0.3)" : "rgba(16, 185, 129, 0.3)"}`
+                        }}
+                      >
+                        {p.productType || 'BOSA'}
+                      </div>
+                    </td>
+                    <td>
+                      <div 
+                        style={{
+                          display: "inline-block",
+                          padding: "4px 8px",
+                          borderRadius: "12px",
+                          fontSize: "11px",
+                          fontWeight: "600",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px",
+                          backgroundColor: p.isWithdrawable ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)",
+                          color: p.isWithdrawable ? "#059669" : "#dc2626",
+                          border: `1px solid ${p.isWithdrawable ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`
+                        }}
+                      >
+                        {p.isWithdrawable ? 'Yes' : (p.withdrawableFrom ? `From ${new Date(p.withdrawableFrom).toLocaleDateString()}` : 'No')}
+                      </div>
+                    </td>
                     <td>
                       <div 
                         style={{

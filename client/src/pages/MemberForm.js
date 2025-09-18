@@ -1,10 +1,11 @@
 import React, { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../helpers/AuthContext";
 import { useHistory, useParams, useLocation } from "react-router-dom";
-import { FiArrowLeft, FiEdit3, FiTrash2, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiEdit3, FiTrash2, FiX, FiSearch } from "react-icons/fi";
 import axios from "axios";
 import { useSnackbar } from "../helpers/SnackbarContext";
 import DashboardWrapper from '../components/DashboardWrapper';
+import SaccoLookupModal from '../components/SaccoLookupModal';
 
 function MemberForm() {
   const history = useHistory();
@@ -17,6 +18,7 @@ function MemberForm() {
 
   const [form, setForm] = useState({
     memberNo: "",
+    saccoId: "",
     firstName: "",
     lastName: "",
     title: "",
@@ -64,6 +66,9 @@ function MemberForm() {
   const [dragOver, setDragOver] = useState(false);
 
   const [activeTab, setActiveTab] = useState("personal");
+  
+  // Sacco lookup modal state
+  const [isSaccoModalOpen, setIsSaccoModalOpen] = useState(false);
   
   // Accounts state
   const [accounts, setAccounts] = useState([]);
@@ -114,6 +119,7 @@ function MemberForm() {
         const data = res.data?.entity || res.data;
         setForm({
           memberNo: data.memberNo || "",
+          saccoId: data.saccoId || "",
           firstName: data.firstName || "",
           lastName: data.lastName || "",
           title: data.title || "",
@@ -225,6 +231,12 @@ function MemberForm() {
   const deleteNextOfKin = (index) => {
     setNextOfKin(nextOfKin.filter((_, i) => i !== index));
     showMessage("Next of kin deleted successfully", "success");
+  };
+
+  // Sacco selection handler
+  const handleSaccoSelect = (sacco) => {
+    setForm({ ...form, saccoId: sacco.saccoId });
+    showMessage(`Sacco "${sacco.saccoName}" selected successfully`, "success");
   };
 
   // Photo and Signature handlers
@@ -488,6 +500,7 @@ function MemberForm() {
             </div>          
           </div> 
 
+
           {/* Tab Navigation */}
           <div style={{
             display: "flex",
@@ -601,6 +614,30 @@ function MemberForm() {
                     <option>Priest</option>
                     <option>Group</option>
                   </select>
+                </label>
+                <label>Sacco
+                  <div className="role-input-wrapper">
+                    <input 
+                      type="text"
+                      className="input" 
+                      value={form.saccoId} 
+                      onChange={e => setForm({ ...form, saccoId: e.target.value })} 
+                      disabled={!isCreate && !isEdit}
+                      placeholder="Select a sacco"
+                      readOnly={!isCreate && !isEdit}
+                      required
+                    />
+                    {(isCreate || isEdit) && (
+                      <button
+                        type="button"
+                        className="role-search-btn"
+                        onClick={() => setIsSaccoModalOpen(true)}
+                        title="Search saccos"
+                      >
+                        <FiSearch />
+                      </button>
+                    )}
+                  </div>
                 </label>
                 <label>First Name<input className="input" value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} required disabled={!isCreate && !isEdit} /></label>
                 <label>Last Name<input className="input" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} required disabled={!isCreate && !isEdit} /></label>
@@ -1056,7 +1093,36 @@ function MemberForm() {
                         <tbody>
                           {accounts.map((account, index) => (
                             <tr key={account.id || index}>
-                              <td style={{ fontFamily: "monospace", fontWeight: "600" }}>
+                              <td 
+                                style={{ 
+                                  fontFamily: "monospace", 
+                                  fontWeight: "600",
+                                  cursor: "pointer",
+                                  color: "var(--primary-600)",
+                                  transition: "color 0.2s ease"
+                                }}
+                                onClick={() => {
+                                  navigator.clipboard.writeText(account.accountId).then(() => {
+                                    showMessage("Copied to clipboard", "success");
+                                  }).catch(() => {
+                                    // Fallback for older browsers
+                                    const textArea = document.createElement("textarea");
+                                    textArea.value = account.accountId;
+                                    document.body.appendChild(textArea);
+                                    textArea.select();
+                                    document.execCommand("copy");
+                                    document.body.removeChild(textArea);
+                                    showMessage("Copied to clipboard", "success");
+                                  });
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.target.style.color = "var(--primary-700)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.target.style.color = "var(--primary-600)";
+                                }}
+                                title="Click to copy Account ID"
+                              >
                                 {account.accountId}
                               </td>
                               <td style={{ fontFamily: "monospace" }}>
@@ -1587,6 +1653,13 @@ function MemberForm() {
           </div>
         </div>
       )}
+
+      {/* Sacco Lookup Modal */}
+      <SaccoLookupModal
+        isOpen={isSaccoModalOpen}
+        onClose={() => setIsSaccoModalOpen(false)}
+        onSelectSacco={handleSaccoSelect}
+      />
 
     </DashboardWrapper>
   );

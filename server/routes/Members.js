@@ -73,6 +73,7 @@ router.post("/", validateToken, logCreateOperation("Member"), async (req, res) =
     const username = req.user?.username || null;
     const payload = {
       memberNo: data.memberNo,
+      saccoId: data.saccoId,
       title: data.title || null,
       firstName: data.firstName,
       lastName: data.lastName,
@@ -111,7 +112,7 @@ router.post("/", validateToken, logCreateOperation("Member"), async (req, res) =
         where: { 
           appliedOnMemberOnboarding: true, 
           isDeleted: 0,
-          status: 'Active'
+          status: 'Approved'
         },
         transaction
       });
@@ -150,6 +151,7 @@ router.post("/", validateToken, logCreateOperation("Member"), async (req, res) =
         if (!existingAccount) {
           const accountPayload = {
             accountId,
+            saccoId: created.saccoId,
             memberId: created.id,
             productId: product.id,
             accountName,
@@ -204,6 +206,7 @@ router.put("/:id", validateToken, logUpdateOperation("Member"), async (req, res)
     const username = req.user?.username || null;
     const updatePayload = {
       memberNo: data.memberNo,
+      saccoId: data.saccoId,
       title: data.title || null,
       firstName: data.firstName,
       lastName: data.lastName,

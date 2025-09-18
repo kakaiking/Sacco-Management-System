@@ -30,6 +30,8 @@ import UserMaintenance from "./pages/UserMaintenance";
 import UserForm from "./pages/UserForm";
 import SetupPassword from "./pages/SetupPassword";
 import LogsManagement from "./pages/LogsManagement";
+import TransactionMaintenance from "./pages/TransactionMaintenance";
+import TransactionForm from "./pages/TransactionForm";
 
 import { AuthContext } from "./helpers/AuthContext";
 import { SidebarProvider } from "./helpers/SidebarContext";
@@ -291,6 +293,8 @@ function App() {
                 <Route path="/user-form/:id" exact component={UserForm} />
                 <Route path="/setup-password" exact component={SetupPassword} />
                 <Route path="/logs-management" exact component={LogsManagement} />
+                <Route path="/transactions" exact component={TransactionMaintenance} />
+                <Route path="/transaction/:id" exact component={TransactionForm} />
                 <Route path="*" exact component={PageNotFound} />
               </Switch>
             </Router>

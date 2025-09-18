@@ -13,3 +13,6 @@ module.exports = {
     await queryInterface.removeColumn('Users', 'saccoId');
   }
 };
+
+
+

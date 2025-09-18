@@ -36,6 +36,9 @@ function ProductForm() {
     isSpecial: false,
     maxSpecialUsers: "",
     appliedOnMemberOnboarding: false,
+    isWithdrawable: true,
+    withdrawableFrom: "",
+    productType: "BOSA",
     productStatus: "Pending",
     status: "Pending",
     createdBy: "",
@@ -705,6 +708,93 @@ function ProductForm() {
                         style={{ transform: "scale(1.2)" }}
                       />
                       <span>Applied on Member Onboarding</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Withdrawal Configuration */}
+                <div style={{ 
+                  marginBottom: "20px", 
+                  display: "flex", 
+                  justifyContent: "center", 
+                  alignItems: "center",
+                  flexDirection: "column",
+                  gap: "16px"
+                }}>
+                  <h4 style={{ marginBottom: "12px", color: "var(--primary-700)", textAlign: "center" }}>Withdrawal Configuration</h4>
+                  
+                  {/* Is Withdrawable */}
+                  <div style={{ display: "flex", gap: "24px", justifyContent: "center", alignItems: "center" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={form.isWithdrawable}
+                        onChange={e => setForm({ ...form, isWithdrawable: e.target.checked })}
+                        disabled={!isCreate && !isEdit}
+                        style={{ transform: "scale(1.2)" }}
+                      />
+                      <span>Is Withdrawable</span>
+                    </label>
+                  </div>
+
+                  {/* Withdrawable From Date - only show if not withdrawable */}
+                  {!form.isWithdrawable && (
+                    <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                      <label style={{ fontWeight: "600", color: "var(--primary-700)", minWidth: "140px" }}>
+                        Withdrawable From:
+                      </label>
+                      <input
+                        type="date"
+                        value={form.withdrawableFrom}
+                        onChange={e => setForm({ ...form, withdrawableFrom: e.target.value })}
+                        disabled={!isCreate && !isEdit}
+                        style={{
+                          padding: "8px 12px",
+                          border: "1px solid var(--border)",
+                          borderRadius: "6px",
+                          fontSize: "14px"
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Product Type Configuration */}
+                <div style={{ 
+                  marginBottom: "20px", 
+                  display: "flex", 
+                  justifyContent: "center", 
+                  alignItems: "center",
+                  flexDirection: "column",
+                  gap: "16px"
+                }}>
+                  <h4 style={{ marginBottom: "12px", color: "var(--primary-700)", textAlign: "center" }}>Product Type</h4>
+                  
+                  <div style={{ display: "flex", gap: "24px", justifyContent: "center" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                      <input
+                        type="radio"
+                        name="productType"
+                        value="BOSA"
+                        checked={form.productType === "BOSA"}
+                        onChange={e => setForm({ ...form, productType: e.target.value })}
+                        disabled={!isCreate && !isEdit}
+                        style={{ transform: "scale(1.2)" }}
+                      />
+                      <span>BOSA</span>
+                    </label>
+                    
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                      <input
+                        type="radio"
+                        name="productType"
+                        value="FOSA"
+                        checked={form.productType === "FOSA"}
+                        onChange={e => setForm({ ...form, productType: e.target.value })}
+                        disabled={!isCreate && !isEdit}
+                        style={{ transform: "scale(1.2)" }}
+                      />
+                      <span>FOSA</span>
                     </label>
                   </div>
                 </div>

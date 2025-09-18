@@ -12,6 +12,7 @@ function Sidebar() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [accountingOpen, setAccountingOpen] = useState(false);
+  const [transactionsOpen, setTransactionsOpen] = useState(false);
   const location = useLocation();
   const history = useHistory();
   const { authState } = React.useContext(AuthContext);
@@ -88,6 +89,7 @@ function Sidebar() {
                 setAdminOpen(v => !v);
                 setConfigOpen(false);
                 setAccountingOpen(false);
+                setTransactionsOpen(false);
               }}>
                 <span className="o-menu__icon"><FiTool /></span>
                 <span className="o-menu__label">Admin</span>
@@ -149,6 +151,7 @@ function Sidebar() {
                 setConfigOpen(v => !v);
                 setAdminOpen(false);
                 setAccountingOpen(false);
+                setTransactionsOpen(false);
               }}>
                 <span className="o-menu__icon"><FiSettings /></span>
                 <span className="o-menu__label">Configurations</span>
@@ -214,6 +217,7 @@ function Sidebar() {
                 setAccountingOpen(v => !v);
                 setAdminOpen(false);
                 setConfigOpen(false);
+                setTransactionsOpen(false);
               }}>
                 <span className="o-menu__icon"><FiSettings /></span>
                 <span className="o-menu__label">Accounting</span>
@@ -226,6 +230,35 @@ function Sidebar() {
                   {canView(PERMISSIONS.LOAN_CALCULATOR) && (
                     <Link className={`o-submenu__item ${location.pathname === "/loan-calculator" ? "active" : ""}`} to="/loan-calculator">Loan Calculator</Link>
                   )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Transactions Section - Only show if user has permission to view transactions module */}
+          {canView(PERMISSIONS.TRANSACTION_MAINTENANCE) && (
+            <>
+              <button className={`o-menu__item`} type="button" onClick={() => {
+                frontendLoggingService.logMenuClick("Transactions", transactionsOpen ? "Close" : "Open");
+                setTransactionsOpen(v => !v);
+                setAdminOpen(false);
+                setConfigOpen(false);
+                setAccountingOpen(false);
+              }}>
+                <span className="o-menu__icon"><FiSettings /></span>
+                <span className="o-menu__label">Transactions</span>
+                <span className={`o-menu__arrow ${transactionsOpen ? "up" : "down"}`}>{transactionsOpen ? <FiChevronUp /> : <FiChevronDown />}</span>
+              </button>
+
+              {transactionsOpen && (
+                <div className="o-submenu">
+                  <Link 
+                    className={`o-submenu__item ${location.pathname === "/transactions" ? "active" : ""}`} 
+                    to="/transactions"
+                    onClick={() => frontendLoggingService.logMenuClick("Transactions", "Transactions Universe")}
+                  >
+                    Transactions Universe
+                  </Link>
                 </div>
               )}
             </>

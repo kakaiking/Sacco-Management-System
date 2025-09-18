@@ -35,8 +35,8 @@ function MemberMaintenance() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusAction, setStatusAction] = useState("");
   const [verifierRemarks, setVerifierRemarks] = useState("");
-  const [sortField] = useState("memberNo");
-  const [sortDirection] = useState("asc");
+  const [sortField] = useState("createdOn");
+  const [sortDirection] = useState("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -76,7 +76,7 @@ function MemberMaintenance() {
       let bValue = b[sortField];
 
       // Handle date sorting
-      if (sortField === 'dateOfBirth') {
+      if (sortField === 'dateOfBirth' || sortField === 'createdOn') {
         aValue = new Date(aValue);
         bValue = new Date(bValue);
       }
@@ -466,6 +466,14 @@ function MemberMaintenance() {
                   <th>Nationality</th>
                   <th>ID Number</th>
                   <th>
+                    Created On
+                    {sortField === 'createdOn' && (
+                      <span style={{ marginLeft: '8px', color: 'var(--primary-500)' }}>
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </th>
+                  <th>
                     Status
                     {sortField === 'status' && (
                       <span style={{ marginLeft: '8px', color: 'var(--primary-500)' }}>
@@ -494,6 +502,7 @@ function MemberMaintenance() {
                     <td>{m.dateOfBirth}</td>
                     <td>{m.nationality}</td>
                     <td>{m.identificationNumber}</td>
+                    <td>{m.createdOn ? new Date(m.createdOn).toLocaleDateString() : '-'}</td>
                     <td>
                       <div 
                         style={{

@@ -10,6 +10,7 @@ export const PERMISSIONS = {
   BRANCH_MAINTENANCE: 'branch_maintenance',
   CHARGES_MANAGEMENT: 'charges_management',
   ACCOUNTS_MANAGEMENT: 'accounts_management',
+  TRANSACTION_MAINTENANCE: 'transaction_maintenance',
   LOAN_CALCULATOR: 'loan_calculator',
   LOGS_MAINTENANCE: 'logs_maintenance',
   
@@ -80,6 +81,13 @@ export const DEFAULT_PERMISSIONS = {
     [PERMISSIONS.APPROVE]: false,
   },
   [PERMISSIONS.ACCOUNTS_MANAGEMENT]: {
+    [PERMISSIONS.VIEW]: false,
+    [PERMISSIONS.ADD]: false,
+    [PERMISSIONS.EDIT]: false,
+    [PERMISSIONS.DELETE]: false,
+    [PERMISSIONS.APPROVE]: false,
+  },
+  [PERMISSIONS.TRANSACTION_MAINTENANCE]: {
     [PERMISSIONS.VIEW]: false,
     [PERMISSIONS.ADD]: false,
     [PERMISSIONS.EDIT]: false,
@@ -161,6 +169,13 @@ export const ADMIN_PERMISSIONS = {
     [PERMISSIONS.APPROVE]: true,
   },
   [PERMISSIONS.ACCOUNTS_MANAGEMENT]: {
+    [PERMISSIONS.VIEW]: true,
+    [PERMISSIONS.ADD]: true,
+    [PERMISSIONS.EDIT]: true,
+    [PERMISSIONS.DELETE]: true,
+    [PERMISSIONS.APPROVE]: true,
+  },
+  [PERMISSIONS.TRANSACTION_MAINTENANCE]: {
     [PERMISSIONS.VIEW]: true,
     [PERMISSIONS.ADD]: true,
     [PERMISSIONS.EDIT]: true,
